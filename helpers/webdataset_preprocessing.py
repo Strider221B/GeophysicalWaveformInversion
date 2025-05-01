@@ -17,7 +17,6 @@ class WebdatasetPreprocessing:
     _KEY = "__key__"
     _NPY_SEIS = 'seis.npy'
     _NPY_VEL = 'vel.npy'
-    _NUMPY_EXTN = "*.npy"
     _TXT_SAMPLE_ID = 'sample_id.txt'
 
     @classmethod
@@ -247,7 +246,7 @@ class WebdatasetPreprocessing:
         try:
             # Create key from relative path parts, removing .npy suffix
             relative_path = in_file.relative_to(base_dir)
-            common_part = "_".join(relative_path.parts).replace(cls._NUMPY_EXTN, "")
+            common_part = "_".join(relative_path.parts).replace(Constants.NUMPY_EXTN, "")
             # Ensure compatibility across OS path separators
             common_part = common_part.replace(os.sep, "_").replace("\\", "_")
         except ValueError:
@@ -294,11 +293,11 @@ class WebdatasetPreprocessing:
 
         # Check for HF structure first, then Kaggle structure
         if data_subdir.is_dir() and model_subdir.is_dir():
-            in_files = sorted(data_subdir.glob(cls._NUMPY_EXTN))
-            out_files = sorted(model_subdir.glob(cls._NUMPY_EXTN))
+            in_files = sorted(data_subdir.glob(Constants.NUMPY_EXTN))
+            out_files = sorted(model_subdir.glob(Constants.NUMPY_EXTN))
         else:
-            in_files = sorted(data_dir.glob(f"seis{cls._NUMPY_EXTN}"))
-            out_files = sorted(data_dir.glob(f"vel{cls._NUMPY_EXTN}"))
+            in_files = sorted(data_dir.glob(f"seis{Constants.NUMPY_EXTN}"))
+            out_files = sorted(data_dir.glob(f"vel{Constants.NUMPY_EXTN}"))
 
         if not in_files or len(in_files) != len(out_files):
             if in_files or out_files:  # Only warn if some files were found
