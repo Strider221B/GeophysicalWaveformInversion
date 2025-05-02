@@ -27,6 +27,7 @@ class Config:
     aug_seis_noise_std = 0.01  # Std dev of Gaussian noise added to seismic data
 
     # --- Model params (U-Net) ---
+    model_prefix = 'unet_best_model'
     unet_in_channels = 5
     unet_out_channels = 1
     unet_init_features = 32

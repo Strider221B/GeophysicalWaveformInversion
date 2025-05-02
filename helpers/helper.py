@@ -1,9 +1,8 @@
+import glob
 import os
 import random
-
 from typing import List
 
-import glob
 import numpy as np
 import torch
 
@@ -27,7 +26,7 @@ class Helper:
         print(f"Seed set to {seed}")
 
     @classmethod
-    def find_best_model(cls, model_dir=Config.working_dir, model_prefix="unet_best_model"):
+    def find_best_model(cls, model_dir=Config.working_dir, model_prefix=Config.model_prefix):
         """
         Finds the best model file based on filename pattern (lowest loss).
         Falls back to most recently created/modified if pattern fails or doesn't exist.
@@ -54,6 +53,14 @@ class Helper:
             best_model_path = cls._find_latest_model_with(model_dir, extn)
 
         return best_model_path
+    
+    @classmethod
+    def initialize(cls):
+        cls.set_seed(Config.seed)
+        print(f"Device: {Config.device}")
+        print(f"Using PyTorch version: {torch.__version__}")
+        if Config.use_cuda:
+            print(f"CUDA available: {torch.cuda.get_device_name(0)}")
     
     @classmethod
     def _find_latest_model_with(cls, model_dir: str, extn: str = '.pth') -> str:
