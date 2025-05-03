@@ -8,7 +8,7 @@ import webdataset as wds
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 
-from config import Config
+from configs.config import Config
 from helpers.constants import Constants
 
 class WebdatasetPreprocessing:

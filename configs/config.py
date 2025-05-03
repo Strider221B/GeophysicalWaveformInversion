@@ -1,7 +1,10 @@
 import os
 import torch
 
+from configs.model_configs.u_net_config import UNetConfig as model_config
+
 class Config:
+   
     kaggle_train_dir = "/kaggle/input/waveform-inversion/train_samples"
     kaggle_test_dir = "/kaggle/input/waveform-inversion/test"
     shard_output_dir = "/kaggle/working/sharded_data"
@@ -27,18 +30,10 @@ class Config:
     aug_seis_noise_std = 0.01  # Std dev of Gaussian noise added to seismic data
 
     # --- Model params (U-Net) ---
-    model_prefix = 'unet_best_model'
-    unet_in_channels = 5
-    unet_out_channels = 1
-    unet_init_features = 32
-    unet_depth = 5
-    unet_bilinear = True
+    model_prefix = model_config.model_prefix
+    learning_rate = model_config.learning_rate
+    weight_decay = model_config.weight_decay
 
-    # --- Training params ---
-    n_epochs = 100
-    learning_rate = 1e-4
-    weight_decay = 1e-5
-    plot_every_n_epochs = 5
 
     # --- Misc ---
     seed = 42

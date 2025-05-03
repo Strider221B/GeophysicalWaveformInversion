@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from config import Config
+from configs.model_configs.u_net_config import UNetConfig
 from models.u_net.double_conv import DoubleConv
 from models.u_net.downscale_with_double_conv import DownScaleWithDoubleConv
 from models.u_net.out_conv import OutConv
@@ -12,11 +12,11 @@ class UNet(nn.Module):
 
     def __init__(
         self,
-        n_channels=Config.unet_in_channels,
-        n_classes=Config.unet_out_channels,
-        init_features=Config.unet_init_features,
-        depth=Config.unet_depth,
-        bilinear=Config.unet_bilinear,
+        n_channels=UNetConfig.unet_in_channels,
+        n_classes=UNetConfig.unet_out_channels,
+        init_features=UNetConfig.unet_init_features,
+        depth=UNetConfig.unet_depth,
+        bilinear=UNetConfig.unet_bilinear,
     ):
         super().__init__()
         self._n_channels = n_channels

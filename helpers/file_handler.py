@@ -9,7 +9,7 @@ import tqdm
 import webdataset as wds
 from torch.utils.data import DataLoader
 
-from config import Config
+from configs.config import Config
 from helpers.constants import Constants
 from helpers.webdataset_preprocessing import WebdatasetPreprocessing as wdp
 

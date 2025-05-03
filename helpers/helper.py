@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 import torch
 
-from config import Config
+from configs.config import Config
 
 class Helper:
 
