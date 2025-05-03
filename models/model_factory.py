@@ -1,0 +1,38 @@
+from typing import Tuple
+
+import torch
+import torch.nn as nn
+from torch.optim.optimizer import Optimizer
+
+from configs.config import Config
+from configs.model_configs.u_net_config import UNetConfig
+from models.u_net.unet import UNet
+
+class ModelFactory:
+
+    @classmethod
+    def initialize_model(cls):
+        if Config.model_prefix == UNetConfig.model_prefix:
+            return cls._initialize_unet()
+        raise ValueError('Invalid model provided.')
+    
+    @staticmethod
+    def _initialize_unet() -> Tuple[nn.Module, Optimizer, nn._Loss]:
+        model = None,
+        optimizer = None
+        criterion = None
+        try:
+            model = UNet().to(Config.device)
+            params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+            print(f"Model: {model.__class__.__name__}, Trainable Params: {params:,}")
+            criterion = nn.L1Loss()  # Mean Absolute Error
+            optimizer = torch.optim.AdamW(model.parameters(), 
+                                          lr=Config.learning_rate, 
+                                          weight_decay=Config.weight_decay)
+            print(f"Loss Function: {criterion.__class__.__name__}")
+            print(f"Optimizer: {optimizer.__class__.__name__} "
+                  f"(lr={Config.learning_rate}, wd={Config.weight_decay})")
+        except Exception as e:
+            print(f"E: Model initialization failed: {e}")
+            raise
+        return model, optimizer, criterion

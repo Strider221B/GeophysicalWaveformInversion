@@ -7,6 +7,7 @@ import numpy as np
 import torch
 
 from configs.config import Config
+from helpers.constants import Constants
 
 class Helper:
 
@@ -32,13 +33,12 @@ class Helper:
         Falls back to most recently created/modified if pattern fails or doesn't exist.
         """
         best_model_path = None
-        extn = '.pth'
-        pattern = os.path.join(model_dir, f"{model_prefix}_epoch_*_loss_*{extn}")
+        pattern = os.path.join(model_dir, f"{model_prefix}_epoch_*_loss_*{Constants.EXTN_MODEL}")
         model_files = glob.glob(pattern)
 
         if not model_files:
-            print(f"W: No models matching pattern '{pattern}'. Looking for *{extn}")
-            best_model_path = cls._find_latest_model_with(model_dir, extn)
+            print(f"W: No models matching pattern '{pattern}'. Looking for *{Constants.EXTN_MODEL}")
+            best_model_path = cls._find_latest_model_with(model_dir, Constants.EXTN_MODEL)
 
         elif "loss" in os.path.basename(pattern):
             print('Trying to find best model using loss info')
@@ -49,8 +49,8 @@ class Helper:
             best_model_path = cls._get_latest_file_from(model_files)
 
         if not best_model_path:
-            print(f"W: No models found, final fallback. Looking for *{extn}")
-            best_model_path = cls._find_latest_model_with(model_dir, extn)
+            print(f"W: No models found, final fallback. Looking for *{Constants.EXTN_MODEL}")
+            best_model_path = cls._find_latest_model_with(model_dir, Constants.EXTN_MODEL)
 
         return best_model_path
     
@@ -63,7 +63,7 @@ class Helper:
             print(f"CUDA available: {torch.cuda.get_device_name(0)}")
     
     @classmethod
-    def _find_latest_model_with(cls, model_dir: str, extn: str = '.pth') -> str:
+    def _find_latest_model_with(cls, model_dir: str, extn: str = Constants.EXTN_MODEL) -> str:
         all_pth_files = glob.glob(os.path.join(model_dir, f"*{extn}"))
         latest_model_path = None
         if all_pth_files:
@@ -78,7 +78,7 @@ class Helper:
         best_model_path = None
         for model_file_name in model_file_names:
             try:
-                loss_str = model_file_name.split("_loss_")[-1].split(".pth")[0]
+                loss_str = model_file_name.split("_loss_")[-1].split(Constants.EXTN_MODEL)[0]
                 loss = float(loss_str)
                 parsed_models.append((loss, model_file_name))
             except (ValueError, IndexError, AttributeError):

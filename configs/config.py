@@ -31,6 +31,7 @@ class Config:
 
     # --- Model params (U-Net) ---
     model_prefix = model_config.model_prefix
+    n_epochs = model_config.n_epochs
     learning_rate = model_config.learning_rate
     weight_decay = model_config.weight_decay
 

@@ -117,10 +117,10 @@ class WebdatasetPreprocessing:
             print(f"W: Shard directory not found: {dataset_dir}")
             return (None, None) if stage == Constants.TRAIN else None
 
-        shard_paths = sorted([str(p) for p in dataset_dir.glob(f"*{Constants.SHARD_EXTN}")])
+        shard_paths = sorted([str(p) for p in dataset_dir.glob(f"*{Constants.EXTN_SHARD}")])
 
         if not shard_paths:
-            print(f"W: No {Constants.SHARD_EXTN} shards found in {dataset_dir}.")
+            print(f"W: No {Constants.EXTN_SHARD} shards found in {dataset_dir}.")
             return (None, None) if stage == Constants.TRAIN else None
 
         print(f"Found {len(shard_paths)} total shards.")
@@ -246,7 +246,7 @@ class WebdatasetPreprocessing:
         try:
             # Create key from relative path parts, removing .npy suffix
             relative_path = in_file.relative_to(base_dir)
-            common_part = "_".join(relative_path.parts).replace(Constants.NUMPY_EXTN, "")
+            common_part = "_".join(relative_path.parts).replace(Constants.EXTN_NUMPY, "")
             # Ensure compatibility across OS path separators
             common_part = common_part.replace(os.sep, "_").replace("\\", "_")
         except ValueError:
@@ -293,11 +293,11 @@ class WebdatasetPreprocessing:
 
         # Check for HF structure first, then Kaggle structure
         if data_subdir.is_dir() and model_subdir.is_dir():
-            in_files = sorted(data_subdir.glob(Constants.NUMPY_EXTN))
-            out_files = sorted(model_subdir.glob(Constants.NUMPY_EXTN))
+            in_files = sorted(data_subdir.glob(Constants.EXTN_NUMPY))
+            out_files = sorted(model_subdir.glob(Constants.EXTN_NUMPY))
         else:
-            in_files = sorted(data_dir.glob(f"seis{Constants.NUMPY_EXTN}"))
-            out_files = sorted(data_dir.glob(f"vel{Constants.NUMPY_EXTN}"))
+            in_files = sorted(data_dir.glob(f"seis{Constants.EXTN_NUMPY}"))
+            out_files = sorted(data_dir.glob(f"vel{Constants.EXTN_NUMPY}"))
 
         if not in_files or len(in_files) != len(out_files):
             if in_files or out_files:  # Only warn if some files were found

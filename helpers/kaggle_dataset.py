@@ -16,10 +16,10 @@ class KaggleTestDataset(Dataset):
         try:
             if not self._test_files_dir.is_dir():
                 raise FileNotFoundError(f"Kaggle test directory missing: {self._test_files_dir}")
-            self._test_files = sorted(list(self._test_files_dir.glob(Constants.NUMPY_EXTN)))
-            print(f"Found {len(self._test_files)} '{Constants.NUMPY_EXTN}' files in Kaggle test dir: {self._test_files_dir}")
+            self._test_files = sorted(list(self._test_files_dir.glob(Constants.EXTN_NUMPY)))
+            print(f"Found {len(self._test_files)} '{Constants.EXTN_NUMPY}' files in Kaggle test dir: {self._test_files_dir}")
             if not self._test_files:
-                print(f"W: No {Constants.NUMPY_EXTN} files found in {self._test_files_dir}.")
+                print(f"W: No {Constants.EXTN_NUMPY} files found in {self._test_files_dir}.")
         except Exception as e:
             print(f"E: Error accessing Kaggle test directory {self._test_files_dir}: {e}")
 

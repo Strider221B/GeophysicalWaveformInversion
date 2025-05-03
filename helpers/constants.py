@@ -1,9 +1,10 @@
 class Constants:
 
-    NUMPY_EXTN = "*.npy"
+    EXTN_MODEL = '.pth'
+    EXTN_NUMPY = '*.npy'
+    EXTN_SHARD = '.tar'
     PNG_TRAINING_HISTORY = 'training_history.png'
     SAMPLE_ID = 'sample_id'
-    SHARD_EXTN = '.tar'
     SEIS = 'seis'
     TRAIN = 'train'
     VAL = 'val'

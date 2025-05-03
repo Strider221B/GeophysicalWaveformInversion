@@ -19,7 +19,7 @@ class FileHandler:
     def clean_up():
         paths_to_clean = [Config.shard_output_dir]
         # Find previous best model files based on pattern
-        model_pattern = os.path.join(Config.working_dir, f"{Config.model_prefix}_epoch_*_loss_*.pth")
+        model_pattern = os.path.join(Config.working_dir, f"{Config.model_prefix}_epoch_*_loss_*{Constants.EXTN_MODEL}")
         paths_to_clean.extend(glob.glob(model_pattern))
         # Add plot and submission files
         paths_to_clean.append(os.path.join(Config.working_dir, Constants.PNG_TRAINING_HISTORY))
@@ -54,7 +54,7 @@ class FileHandler:
             if shards_need_creation:
                 cls._create_shards(kaggle_train_root, shard_stage_dir)
             else:
-                existing_shard_count = len(list(shard_stage_dir.glob(f"*{Constants.SHARD_EXTN}")))
+                existing_shard_count = len(list(shard_stage_dir.glob(f"*{Constants.EXTN_SHARD}")))
                 print(f"Using {existing_shard_count} existing shards.")
 
         except Exception as e:
@@ -82,7 +82,7 @@ class FileHandler:
 
             # Check if any shards actually exist if paths were returned empty
             shard_check_dir = Path(Config.shard_output_dir) / f"train_{Config.dataset_name}"
-            if not list(shard_check_dir.glob(f"*{Constants.SHARD_EXTN}")):
+            if not list(shard_check_dir.glob(f"*{Constants.EXTN_SHARD}")):
                 raise RuntimeError(
                     f"No training shards selected AND no .tar files found in {shard_check_dir}."
                 )
@@ -189,7 +189,7 @@ class FileHandler:
     def _write_shards(shard_stage_dir: Path,
                       kaggle_train_root: Path,
                       kaggle_file_pairs: List[Tuple[Path, Path]]):
-        shard_pattern = str(shard_stage_dir / f"%06d{Constants.SHARD_EXTN}")
+        shard_pattern = str(shard_stage_dir / f"%06d{Constants.EXTN_SHARD}")
         print(
             f"Writing shards using pattern {shard_pattern} (max size {Config.maxsize / 1e9:.2f} GB)"
         )
@@ -215,7 +215,7 @@ class FileHandler:
     def _does_shards_need_to_be_created(shard_stage_dir: Path) -> bool:
         # --- Check if shards need creating ---
         needs_creation = True
-        if shard_stage_dir.exists() and any(shard_stage_dir.glob(f"*{Constants.SHARD_EXTN}")):
+        if shard_stage_dir.exists() and any(shard_stage_dir.glob(f"*{Constants.EXTN_SHARD}")):
             if Config.force_shard_creation:
                 print(f"Forcing shard creation. Removing existing shards in {shard_stage_dir}")
                 shutil.rmtree(shard_stage_dir)
