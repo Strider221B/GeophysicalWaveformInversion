@@ -11,18 +11,24 @@ from models.u_net.unet import UNet
 class ModelFactory:
 
     @classmethod
-    def initialize_model(cls):
+    def initialize_model_with_components(cls):
         if Config.model_prefix == UNetConfig.model_prefix:
             return cls._initialize_unet()
         raise ValueError('Invalid model provided.')
     
     @staticmethod
-    def _initialize_unet() -> Tuple[nn.Module, Optimizer, nn._Loss]:
+    def initialize_just_model():
+        if Config.model_prefix == UNetConfig.model_prefix:
+            return UNet().to(Config.device)
+        raise ValueError('Invalid model provided.')
+    
+    @classmethod
+    def _initialize_unet(cls) -> Tuple[nn.Module, Optimizer, nn._Loss]:
         model = None,
         optimizer = None
         criterion = None
         try:
-            model = UNet().to(Config.device)
+            model = cls.initialize_just_model()
             params = sum(p.numel() for p in model.parameters() if p.requires_grad)
             print(f"Model: {model.__class__.__name__}, Trainable Params: {params:,}")
             criterion = nn.L1Loss()  # Mean Absolute Error
