@@ -23,7 +23,7 @@ class ModelFactory:
         raise ValueError('Invalid model provided.')
     
     @classmethod
-    def _initialize_unet(cls) -> Tuple[nn.Module, Optimizer, nn._Loss]:
+    def _initialize_unet(cls) -> Tuple[nn.Module, Optimizer, nn.L1Loss]:
         model = None,
         optimizer = None
         criterion = None
