@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 import numpy as np
 import torch
 import torch.nn as nn
-import tqdm
+from tqdm.auto import tqdm
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
@@ -209,6 +209,8 @@ class ModelRunner:
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             cls._save_model(best_val_loss, epoch, model)
+
+        return best_val_loss
 
     @classmethod
     def _save_model(cls,

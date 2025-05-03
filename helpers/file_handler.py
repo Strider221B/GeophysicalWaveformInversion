@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import List, Tuple
 
-import tqdm
+from tqdm.auto import tqdm
 import webdataset as wds
 from torch.utils.data import DataLoader
 
@@ -195,6 +195,7 @@ class FileHandler:
         )
         with wds.ShardWriter(shard_pattern, maxsize=int(Config.maxsize)) as writer:
             common_base_dir = kaggle_train_root  # For relative path key generation
+            total_samples_written = 0
             for in_file, out_file in tqdm(
                 kaggle_file_pairs, desc="Sharding Kaggle Data", unit="pair"
             ):

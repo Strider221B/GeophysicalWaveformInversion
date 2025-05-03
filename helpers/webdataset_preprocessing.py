@@ -1,5 +1,5 @@
 import os
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -18,6 +18,7 @@ class WebdatasetPreprocessing:
     _NPY_SEIS = 'seis.npy'
     _NPY_VEL = 'vel.npy'
     _TXT_SAMPLE_ID = 'sample_id.txt'
+    _is_train = False
 
     @classmethod
     def search_data_path(cls, 
@@ -81,7 +82,7 @@ class WebdatasetPreprocessing:
 
                 # --- Process and append each sample ---
                 for i in range(n_samples):
-                    cls._extract_and_convert_to_float16(unique_key, i, seis, vel)
+                    cls._extract_and_convert_to_float16(unique_key, i, seis, vel, data)
 
                 # --- Explicitly delete mmap objects after copying data ---
                 # This is important to release file handles, especially with mmap
@@ -158,6 +159,7 @@ class WebdatasetPreprocessing:
             dataset = dataset.decode(handler=map_handler)
 
             # Apply the mapping function to train/val stages
+            cls._is_train = is_train # hack, should convert to member variable
             if stage in [Constants.TRAIN, Constants.VAL]:
                 dataset = dataset.map(cls._map_train_val, handler=map_handler)
 
@@ -173,8 +175,7 @@ class WebdatasetPreprocessing:
     
     @classmethod
     def _map_train_val(cls, 
-                       sample: dict, 
-                       is_train: bool):
+                       sample: dict):
         key_info = sample.get(cls._KEY, "N/A")  # For error reporting
         try:
             required = [cls._TXT_SAMPLE_ID, cls._NPY_SEIS, cls._NPY_VEL]
@@ -188,7 +189,7 @@ class WebdatasetPreprocessing:
             seis_tensor = torch.from_numpy(s_np).float()
             vel_tensor = torch.from_numpy(v_np).float()
 
-            if is_train and Config.apply_augmentation:
+            if cls._is_train and Config.apply_augmentation:
                 seis_tensor, vel_tensor = cls._apply_augmentation(seis_tensor, vel_tensor)
 
             return {Constants.SAMPLE_ID: sid, 
@@ -218,8 +219,8 @@ class WebdatasetPreprocessing:
                                         unique_key: str, 
                                         index: int,
                                         seis: np.ndarray,
-                                        vel: np.ndarray) -> List[dict]:
-        data = []
+                                        vel: np.ndarray,
+                                        data: List[Dict[str, Any]]) -> List[dict]:
         key = f"{unique_key}_{index}"
         # Extract sample, explicitly copy, and convert to float16
         s_sample = cls._convert_to_float_16(seis, index)
