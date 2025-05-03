@@ -24,7 +24,7 @@ class WebdatasetPreprocessing:
                          target_dirs: List[str], 
                          root_dir: str, 
                          shuffle: bool=True, 
-                         seed:int=42):
+                         seed:int=42) -> List[Tuple[Path, Path]]:
         """Finds input/output .npy file pairs within subdirectories of a root directory."""
         result_files = []
         root_path = Path(root_dir)
@@ -117,10 +117,10 @@ class WebdatasetPreprocessing:
             print(f"W: Shard directory not found: {dataset_dir}")
             return (None, None) if stage == Constants.TRAIN else None
 
-        shard_paths = sorted([str(p) for p in dataset_dir.glob("*.tar")])
+        shard_paths = sorted([str(p) for p in dataset_dir.glob(f"*{Constants.SHARD_EXTN}")])
 
         if not shard_paths:
-            print(f"W: No .tar shards found in {dataset_dir}.")
+            print(f"W: No {Constants.SHARD_EXTN} shards found in {dataset_dir}.")
             return (None, None) if stage == Constants.TRAIN else None
 
         print(f"Found {len(shard_paths)} total shards.")
@@ -139,7 +139,7 @@ class WebdatasetPreprocessing:
     def get_dataset(cls, 
                     paths: List[str], 
                     stage: str, 
-                    seed: int=42):
+                    seed: int=42) -> wds.WebDataset:
         """Creates WebDataset object. Applies augmentations if stage=='train'."""
         if not paths:
             print(f"W: No shard paths provided for stage '{stage}'. Cannot create dataset.")
