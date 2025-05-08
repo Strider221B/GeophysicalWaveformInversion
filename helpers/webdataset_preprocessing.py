@@ -1,11 +1,11 @@
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
 import torchvision.transforms.functional as TF
 import webdataset as wds
-from pathlib import Path
 from sklearn.model_selection import train_test_split
 
 from configs.config import Config
@@ -18,13 +18,12 @@ class WebdatasetPreprocessing:
     _NPY_SEIS = 'seis.npy'
     _NPY_VEL = 'vel.npy'
     _TXT_SAMPLE_ID = 'sample_id.txt'
-    _is_train = False
 
     @classmethod
-    def search_data_path(cls, 
-                         target_dirs: List[str], 
-                         root_dir: str, 
-                         shuffle: bool=True, 
+    def search_data_path(cls,
+                         target_dirs: List[str],
+                         root_dir: str,
+                         shuffle: bool=True,
                          seed:int=42) -> List[Tuple[Path, Path]]:
         """Finds input/output .npy file pairs within subdirectories of a root directory."""
         result_files = []
@@ -60,34 +59,33 @@ class WebdatasetPreprocessing:
                 # Logic for test data sharding (if needed later) - not implemented here
                 print("W: generate_sample called without out_file (test mode?), not implemented.")
                 return []
-            else:
-                # --- Load Train/Validation data ---
-                try:
-                    seis, vel = cls._load_train_and_val_data(in_file, out_file)
-                except:
-                    return []
+            # --- Load Train/Validation data ---
+            try:
+                seis, vel = cls._load_train_and_val_data(in_file, out_file)
+            except:
+                return []
 
-                n_samples = cls._get_number_of_samples(seis, vel, in_file.name, out_file.name)
+            n_samples = cls._get_number_of_samples(seis, vel, in_file.name, out_file.name)
 
-                if n_samples == 0:
-                    print(f"W: Found 0 samples in pair: {in_file.name}, {out_file.name}")
-                    del seis, vel
-                    return []
+            if n_samples == 0:
+                print(f"W: Found 0 samples in pair: {in_file.name}, {out_file.name}")
+                del seis, vel
+                return []
 
-                # --- Generate unique key based on file path relative to base_dir ---
-                unique_key = f"{in_file.parent.name}_{in_file.stem}"  # Default key
-                if base_dir:
-                    key_using_base_dir = cls._create_key_from_relative_path(in_file, base_dir)
-                    unique_key = key_using_base_dir if len(key_using_base_dir) > 0 else unique_key
+            # --- Generate unique key based on file path relative to base_dir ---
+            unique_key = f"{in_file.parent.name}_{in_file.stem}"  # Default key
+            if base_dir:
+                key_using_base_dir = cls._create_key_from_relative_path(in_file, base_dir)
+                unique_key = key_using_base_dir if len(key_using_base_dir) > 0 else unique_key
 
-                # --- Process and append each sample ---
-                for i in range(n_samples):
-                    cls._extract_and_convert_to_float16(unique_key, i, seis, vel, data)
+            # --- Process and append each sample ---
+            for i in range(n_samples):
+                cls._extract_and_convert_to_float16(unique_key, i, seis, vel, data)
 
-                # --- Explicitly delete mmap objects after copying data ---
-                # This is important to release file handles, especially with mmap
-                del seis
-                del vel
+            # --- Explicitly delete mmap objects after copying data ---
+            # This is important to release file handles, especially with mmap
+            del seis
+            del vel
 
         except Exception as e:
             # Catch other errors (ValueError from dim check, key gen errors, etc.)
@@ -96,7 +94,7 @@ class WebdatasetPreprocessing:
             if seis is not None:
                 del seis
             if vel is not None:
-                del vels
+                del vel
             return []  # Return empty list on any error during processing
 
         # No finally block needed as del is handled within try/except scopes
@@ -104,10 +102,10 @@ class WebdatasetPreprocessing:
 
     @classmethod
     def get_shard_paths(cls,
-                        root_dir: str, 
-                        dataset_name: str, 
-                        stage, 
-                        num_shards=None, 
+                        root_dir: str,
+                        dataset_name: str,
+                        stage,
+                        num_shards=None,
                         test_size=0.2, seed=42):
         """Gets list of shard paths, optionally selects subset, optionally splits train/val."""
         source_dir_name = f"train_{dataset_name}"
@@ -135,11 +133,11 @@ class WebdatasetPreprocessing:
             return cls._return_train_and_val_path(selected_paths, test_size, seed)
         print(f"# Shards returned for stage '{stage}': {len(selected_paths)}")
         return sorted(selected_paths)
-    
+
     @classmethod
-    def get_dataset(cls, 
-                    paths: List[str], 
-                    stage: str, 
+    def get_dataset(cls,
+                    paths: List[str],
+                    stage: str,
                     seed: int=42) -> wds.WebDataset:
         """Creates WebDataset object. Applies augmentations if stage=='train'."""
         if not paths:
@@ -159,9 +157,10 @@ class WebdatasetPreprocessing:
             dataset = dataset.decode(handler=map_handler)
 
             # Apply the mapping function to train/val stages
-            cls._is_train = is_train # hack, should convert to member variable
+            def map_train_val(sample: dict):
+                return cls._map_train_val(is_train, sample)
             if stage in [Constants.TRAIN, Constants.VAL]:
-                dataset = dataset.map(cls._map_train_val, handler=map_handler)
+                dataset = dataset.map(map_train_val, handler=map_handler)
 
             # Shuffle buffer for training data
             if is_train:
@@ -172,9 +171,10 @@ class WebdatasetPreprocessing:
         except Exception as e:
             print(f"E: Error creating WebDataset pipeline for stage '{stage}': {e}")
             return None
-    
+
     @classmethod
-    def _map_train_val(cls, 
+    def _map_train_val(cls,
+                       is_train: bool,
                        sample: dict):
         key_info = sample.get(cls._KEY, "N/A")  # For error reporting
         try:
@@ -189,20 +189,20 @@ class WebdatasetPreprocessing:
             seis_tensor = torch.from_numpy(s_np).float()
             vel_tensor = torch.from_numpy(v_np).float()
 
-            if cls._is_train and Config.apply_augmentation:
+            if is_train and Config.apply_augmentation:
                 seis_tensor, vel_tensor = cls._apply_augmentation(seis_tensor, vel_tensor)
 
-            return {Constants.SAMPLE_ID: sid, 
-                    Constants.SEIS: seis_tensor, 
+            return {Constants.SAMPLE_ID: sid,
+                    Constants.SEIS: seis_tensor,
                     Constants.VEL: vel_tensor}
 
         except Exception as map_e:
             print(f"E: Map function failed for sample {key_info}: {map_e}")
             # Let the handler decide whether to skip or raise
             raise map_e
-        
+
     @staticmethod
-    def _apply_augmentation(seis_tensor: torch.Tensor, 
+    def _apply_augmentation(seis_tensor: torch.Tensor,
                             vel_tensor: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         # 1. Horizontal Flip
         if torch.rand(1).item() < Config.aug_hflip_prob:
@@ -213,10 +213,10 @@ class WebdatasetPreprocessing:
             noise = torch.randn_like(seis_tensor) * Config.aug_seis_noise_std
             seis_tensor.add_(noise)  # In-place addition
         return seis_tensor, vel_tensor
-        
+
     @classmethod
     def _extract_and_convert_to_float16(cls,
-                                        unique_key: str, 
+                                        unique_key: str,
                                         index: int,
                                         seis: np.ndarray,
                                         vel: np.ndarray,
@@ -234,11 +234,11 @@ class WebdatasetPreprocessing:
             }
         )
         return data
-    
+
     @staticmethod
     def _convert_to_float_16(array: np.ndarray, index: int):
-        return (array[index].copy().astype(np.float16) 
-                if array.ndim == 4 
+        return (array[index].copy().astype(np.float16)
+                if array.ndim == 4
                 else array.copy().astype(np.float16))
 
     @classmethod
@@ -247,14 +247,14 @@ class WebdatasetPreprocessing:
         try:
             # Create key from relative path parts, removing .npy suffix
             relative_path = in_file.relative_to(base_dir)
-            common_part = "_".join(relative_path.parts).replace(Constants.EXTN_NUMPY, "")
+            common_part = "_".join(relative_path.parts).replace(Constants.EXTN_NUMPY.removeprefix('*'), "")
             # Ensure compatibility across OS path separators
             common_part = common_part.replace(os.sep, "_").replace("\\", "_")
         except ValueError:
             # If relative_to fails (e.g., different drives), use the default key
-            pass    
+            pass
         return common_part
-    
+
     @staticmethod
     def _get_number_of_samples(seis: np.ndarray,
                                vel: np.ndarray,
@@ -279,8 +279,8 @@ class WebdatasetPreprocessing:
         return n_samples
 
     @classmethod
-    def _search_for_data_families_using(cls, 
-                                        root_path: Path, 
+    def _search_for_data_families_using(cls,
+                                        root_path: Path,
                                         target_dir: str,
                                         result_files: List[Tuple[Path, Path]]) -> int:
         data_dir = root_path / target_dir
@@ -310,7 +310,7 @@ class WebdatasetPreprocessing:
         current_pairs = list(zip(in_files, out_files))
         result_files.extend(current_pairs)
         return len(current_pairs)
-    
+
     @staticmethod
     def _load_train_and_val_data(in_file: Path, out_file: Path) -> Tuple[np.ndarray, np.ndarray]:
         try:
@@ -343,14 +343,13 @@ class WebdatasetPreprocessing:
                 reason = "only 1 shard" if count <= 1 else "test_size is 0"
                 print(f"W: Cannot split for validation ({reason}). Assigning all to train.")
                 return sorted(selected_paths), []
-            else:
-                trn_paths, val_paths = train_test_split(
-                    selected_paths, test_size=test_size, random_state=seed, shuffle=True
-                )
-                trn_paths.sort()
-                val_paths.sort()
-                print(f"# Train shards: {len(trn_paths)}, # Val shards: {len(val_paths)}")
-                return trn_paths, val_paths
+            trn_paths, val_paths = train_test_split(
+                selected_paths, test_size=test_size, random_state=seed, shuffle=True
+            )
+            trn_paths.sort()
+            val_paths.sort()
+            print(f"# Train shards: {len(trn_paths)}, # Val shards: {len(val_paths)}")
+            return trn_paths, val_paths
         except Exception as e:
             print(f"E: Failed to split shards: {e}")
             return None, None

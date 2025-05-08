@@ -4,7 +4,7 @@ import torch
 from configs.model_configs.u_net_config import UNetConfig as model_config
 
 class Config:
-   
+
     kaggle_train_dir = "/kaggle/input/waveform-inversion/train_samples"
     kaggle_test_dir = "/kaggle/input/waveform-inversion/test"
     shard_output_dir = "/kaggle/working/sharded_data"
@@ -29,11 +29,12 @@ class Config:
     aug_hflip_prob = 0.5  # Probability of horizontal flip
     aug_seis_noise_std = 0.01  # Std dev of Gaussian noise added to seismic data
 
-    # --- Model params (U-Net) ---
+    # --- Model params ---
     model_prefix = model_config.model_prefix
     n_epochs = model_config.n_epochs
     learning_rate = model_config.learning_rate
     weight_decay = model_config.weight_decay
+    plot_every_n_epochs = model_config.plot_every_n_epochs
 
 
     # --- Misc ---

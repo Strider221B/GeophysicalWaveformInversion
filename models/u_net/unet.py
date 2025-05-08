@@ -1,5 +1,5 @@
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 from configs.model_configs.u_net_config import UNetConfig
 from models.u_net.double_conv import DoubleConv
@@ -80,7 +80,7 @@ class UNet(nn.Module):
         # Apply scaling and offset specific to the problem's target range
         output = logits * 1000.0 + 1500.0
         return output
-    
+
     @staticmethod
     def _pad_or_crop(x, target_h=70, target_w=70):
         """Pads or crops input tensor x to target height and width."""

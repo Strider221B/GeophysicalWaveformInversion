@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import pandas as pd

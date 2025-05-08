@@ -1,4 +1,4 @@
-import torch.nn as nn
+from torch import nn
 
 class OutConv(nn.Module):
     """1x1 Convolution for the output layer"""

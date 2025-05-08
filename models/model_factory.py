@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import torch
-import torch.nn as nn
 from torch.optim.optimizer import Optimizer
+from torch import nn
 
 from configs.config import Config
 from configs.model_configs.u_net_config import UNetConfig
@@ -15,16 +15,16 @@ class ModelFactory:
         if Config.model_prefix == UNetConfig.model_prefix:
             return cls._initialize_unet()
         raise ValueError('Invalid model provided.')
-    
+
     @staticmethod
     def initialize_just_model():
         if Config.model_prefix == UNetConfig.model_prefix:
             return UNet().to(Config.device)
         raise ValueError('Invalid model provided.')
-    
+
     @classmethod
     def _initialize_unet(cls) -> Tuple[nn.Module, Optimizer, nn.L1Loss]:
-        model = None,
+        model = None
         optimizer = None
         criterion = None
         try:
@@ -32,8 +32,8 @@ class ModelFactory:
             params = sum(p.numel() for p in model.parameters() if p.requires_grad)
             print(f"Model: {model.__class__.__name__}, Trainable Params: {params:,}")
             criterion = nn.L1Loss()  # Mean Absolute Error
-            optimizer = torch.optim.AdamW(model.parameters(), 
-                                          lr=Config.learning_rate, 
+            optimizer = torch.optim.AdamW(model.parameters(),
+                                          lr=Config.learning_rate,
                                           weight_decay=Config.weight_decay)
             print(f"Loss Function: {criterion.__class__.__name__}")
             print(f"Optimizer: {optimizer.__class__.__name__} "

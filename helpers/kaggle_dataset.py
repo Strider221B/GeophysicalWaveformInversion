@@ -1,8 +1,8 @@
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
 import torch
-from pathlib import Path
 from torch.utils.data import Dataset
 
 from helpers.constants import Constants

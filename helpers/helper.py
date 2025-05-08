@@ -53,7 +53,7 @@ class Helper:
             best_model_path = cls._find_latest_model_with(model_dir, Constants.EXTN_MODEL)
 
         return best_model_path
-    
+
     @classmethod
     def initialize(cls):
         cls.set_seed(Config.seed)
@@ -61,7 +61,7 @@ class Helper:
         print(f"Using PyTorch version: {torch.__version__}")
         if Config.use_cuda:
             print(f"CUDA available: {torch.cuda.get_device_name(0)}")
-    
+
     @classmethod
     def _find_latest_model_with(cls, model_dir: str, extn: str = Constants.EXTN_MODEL) -> str:
         all_pth_files = glob.glob(os.path.join(model_dir, f"*{extn}"))

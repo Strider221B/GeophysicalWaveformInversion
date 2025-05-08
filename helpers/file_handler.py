@@ -2,6 +2,7 @@ import glob
 import gc
 import os
 import shutil
+import traceback
 from pathlib import Path
 from typing import List, Tuple
 
@@ -59,7 +60,6 @@ class FileHandler:
 
         except Exception as e:
             print(f"E: Kaggle-only sharding process failed critically: {e}")
-            import traceback
             traceback.print_exc()
             raise
 
@@ -113,15 +113,14 @@ class FileHandler:
             cls._perform_final_check_on_loaders(dataloader_train,
                                                 dataloader_validation,
                                                 trn_paths,
-                                                val_paths)            
+                                                val_paths)
 
         except Exception as e:
             print(f"E: DataLoader creation failed critically: {e}")
-            import traceback
             traceback.print_exc()
             raise
         return validation_paths, dataloader_train, dataloader_validation
-    
+
     @staticmethod
     def _perform_final_check_on_loaders(dataloader_train: DataLoader,
                                         dataloader_validation: DataLoader,
@@ -140,7 +139,7 @@ class FileHandler:
                 print(f"W: Caught expected TypeError '{te}'. Assume DataLoaders are ok.")
             else:
                 raise te  # Re-raise unexpected TypeError
-    
+
     @staticmethod
     def _create_dataloader_from(paths: List[str], dataset: wds.WebDataset) -> DataLoader:
         n_trn_w = min(Config.num_workers, len(paths)) if paths else 0
@@ -224,7 +223,7 @@ class FileHandler:
                 print(f"Found existing shards at: {shard_stage_dir}. Skipping creation.")
                 needs_creation = False
         return needs_creation
-    
+
     @staticmethod
     def _check_sufficient_disk_space():
         print("\n--- Checking Disk Space Before Directory Creation ---")
@@ -235,7 +234,7 @@ class FileHandler:
             )
         except Exception as du_e:
             print(f"W: Could not check disk usage: {du_e}")
-            
+
     @staticmethod
     def _create_output_dirs(shard_stage_dir: Path):
         try:

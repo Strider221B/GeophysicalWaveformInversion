@@ -2,13 +2,14 @@ import csv
 import gc
 import glob
 import os
+import traceback
 from pathlib import Path
 from typing import Any, Dict, List
 
 import numpy as np
 import torch
-import torch.nn as nn
 from tqdm.auto import tqdm
+from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
@@ -32,7 +33,7 @@ class ModelRunner:
 
         if dataloader_train is None or model is None:
             print("E: Training cannot proceed. Train DataLoader or Model is missing.")
-            return
+            return history
         try:
             for epoch in range(1, Config.n_epochs + 1):
                 best_val_loss = cls._train_for(epoch,
@@ -48,12 +49,11 @@ class ModelRunner:
             print("\n--- Training interrupted by user ---")
         except Exception as e:
             print(f"\nE: Training loop encountered a critical error: {e}")
-            import traceback
             traceback.print_exc()
         finally:
             print("\n--- Training Loop Finished ---")
         return history
-    
+
     @classmethod
     def predict_on_kaggle_test_data(cls):
         print("\n --- Final Prediction on Kaggle Test Set ---")
@@ -82,7 +82,7 @@ class ModelRunner:
             # Setup DataLoader for test set
             # Use slightly smaller batch size and fewer workers for inference if needed
             test_batch_size = max(1, Config.batch_size // 2)
-            test_num_workerd = min(max(0, Config.num_workers // 2), 
+            test_num_workerd = min(max(0, Config.num_workers // 2),
                                    (os.cpu_count() // 2 if os.cpu_count() else 1))
             dataloader_test = DataLoader(
                 test_dataset,
@@ -108,12 +108,11 @@ class ModelRunner:
 
         except Exception as e:
             print(f"E: Final prediction process failed critically: {e}")
-            import traceback
             traceback.print_exc()
 
     @classmethod
-    def _write_submission_file(cls, 
-                               csvfile, 
+    def _write_submission_file(cls,
+                               csvfile,
                                dataloader_test: DataLoader,
                                model_pred: nn.Module):
         # Define CSV header columns (x_1, x_3, ..., x_69)
@@ -125,10 +124,11 @@ class ModelRunner:
         pbar_test = tqdm(dataloader_test, desc="Generating Submission", unit="batch")
         with torch.no_grad():
             for inputs, original_ids in pbar_test:
-                cls._write_for_batch(model_pred, x_cols, writer, original_ids)
+                cls._write_for_batch(inputs, model_pred, x_cols, writer, original_ids)
 
     @classmethod
     def _write_for_batch(cls,
+                         inputs,
                          model_pred: nn.Module,
                          x_cols: List[str],
                          writer: csv.DictWriter,
@@ -192,7 +192,7 @@ class ModelRunner:
         if dataloader_validation is None:
             print("W: Skipping validation phase - no validation DataLoader.")
             history.append({"epoch": epoch, "train_loss": avg_train_loss, "valid_loss": None})
-            return  # Skip to next epoch
+            return best_val_loss # Skip to next epoch
 
         model.eval()
         val_losses = []
@@ -245,7 +245,7 @@ class ModelRunner:
                               val_losses: List[float],
                               batch_index: int,
                               epoch: int):
-        if cls._is_batch_valid(batch) == False:
+        if cls._is_batch_valid(batch) is False:
             return
         try:
             inputs = batch["seis"].to(Config.device, non_blocking=True).float()
@@ -274,14 +274,14 @@ class ModelRunner:
 
     @classmethod
     def _train_batch(cls,
-                     batch: dict, 
+                     batch: dict,
                      batch_index: int,
                      optimizer: Optimizer,
                      model: nn.Module,
                      loss_criterion,
                      train_losses: List[float],
                      pbar_train: tqdm):
-        if cls._is_batch_valid(batch) == False:
+        if cls._is_batch_valid(batch) is False:
             return
         try:
             inputs = batch["seis"].to(Config.device, non_blocking=True).float()

@@ -1,4 +1,4 @@
-import torch.nn as nn
+from torch import nn
 
 from models.u_net.double_conv import DoubleConv
 
