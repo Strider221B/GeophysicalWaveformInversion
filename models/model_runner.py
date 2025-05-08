@@ -94,9 +94,8 @@ class ModelRunner:
             print(f"Test DataLoader created with bs={test_batch_size}, workers={test_num_workerd}")
             print(f"Writing submission file to: {Config.submission_file}")
 
-            rows_written = 0
             with open(Config.submission_file, "wt", newline="") as csvfile:
-                cls._write_submission_file(csvfile, dataloader_test, model_pred)
+                rows_written = cls._write_submission_file(csvfile, dataloader_test, model_pred)
 
             print(f"Submission file created: {Config.submission_file} ({rows_written} rows).")
             # Sanity check row count
@@ -114,7 +113,7 @@ class ModelRunner:
     def _write_submission_file(cls,
                                csvfile,
                                dataloader_test: DataLoader,
-                               model_pred: nn.Module):
+                               model_pred: nn.Module) -> int:
         # Define CSV header columns (x_1, x_3, ..., x_69)
         x_cols = [f"x_{i}" for i in range(1, 70, 2)]
         fieldnames = ["oid_ypos"] + x_cols
@@ -122,9 +121,11 @@ class ModelRunner:
         writer.writeheader()
 
         pbar_test = tqdm(dataloader_test, desc="Generating Submission", unit="batch")
+        rows_written = 0
         with torch.no_grad():
             for inputs, original_ids in pbar_test:
-                cls._write_for_batch(inputs, model_pred, x_cols, writer, original_ids)
+                rows_written += cls._write_for_batch(inputs, model_pred, x_cols, writer, original_ids, rows_written)
+        return rows_written
 
     @classmethod
     def _write_for_batch(cls,
@@ -132,7 +133,8 @@ class ModelRunner:
                          model_pred: nn.Module,
                          x_cols: List[str],
                          writer: csv.DictWriter,
-                         original_ids: List[str]):
+                         original_ids: List[str],
+                         rows_written: int) -> int:
         # Handle batch size = 1 where original_ids might be a string
         if isinstance(original_ids, str):
             original_ids = [original_ids]
@@ -163,6 +165,7 @@ class ModelRunner:
             print(
                 f"\nE: Prediction failed for batch (OID: {original_ids[0] if original_ids else '?'}) : {e}"
             )
+        return rows_written
 
     @classmethod
     def _train_for(cls,
