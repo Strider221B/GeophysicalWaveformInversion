@@ -124,7 +124,7 @@ class ModelRunner:
         rows_written = 0
         with torch.no_grad():
             for inputs, original_ids in pbar_test:
-                rows_written += cls._write_for_batch(inputs, model_pred, x_cols, writer, original_ids, rows_written)
+                rows_written = cls._write_for_batch(inputs, model_pred, x_cols, writer, original_ids, rows_written)
         return rows_written
 
     @classmethod
