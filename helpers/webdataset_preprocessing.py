@@ -208,7 +208,11 @@ class WebdatasetPreprocessing:
         if torch.rand(1).item() < Config.aug_hflip_prob:
             seis_tensor = TF.hflip(seis_tensor)
             vel_tensor = TF.hflip(vel_tensor)
-        # 2. Add Gaussian Noise to Seismic Data
+        # 2. Receiver Flip
+        if torch.rand(1).item() < Config.reciever_flip:
+            seis_tensor = seis_tensor[::-1, :, ::-1]
+            vel_tensor = vel_tensor[:, ::-1]
+        # 3. Add Gaussian Noise to Seismic Data
         if Config.aug_seis_noise_std > 0:
             noise = torch.randn_like(seis_tensor) * Config.aug_seis_noise_std
             seis_tensor.add_(noise)  # In-place addition

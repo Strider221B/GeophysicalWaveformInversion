@@ -5,6 +5,7 @@ from typing import List
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from configs.config import Config
 from helpers.constants import Constants
@@ -61,6 +62,12 @@ class Helper:
         print(f"Using PyTorch version: {torch.__version__}")
         if Config.use_cuda:
             print(f"CUDA available: {torch.cuda.get_device_name(0)}")
+
+    @staticmethod
+    def compress_sample(sample: torch.Tensor):
+        sample = F.interpolate(sample, size=(70, 70), mode='area')
+        sample = F.pad(sample, (1,1,1,1), mode='replicate')
+        return sample
 
     @classmethod
     def _find_latest_model_with(cls, model_dir: str, extn: str = Constants.EXTN_MODEL) -> str:

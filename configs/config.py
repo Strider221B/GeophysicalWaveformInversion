@@ -28,6 +28,7 @@ class Config:
     apply_augmentation = True
     aug_hflip_prob = 0.5  # Probability of horizontal flip
     aug_seis_noise_std = 0.01  # Std dev of Gaussian noise added to seismic data
+    reciever_flip = 0.5
 
     # --- Model params ---
     model_prefix = None
