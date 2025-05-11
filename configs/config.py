@@ -1,7 +1,7 @@
 import os
 import torch
 
-from configs.model_configs.u_net_config import UNetConfig as model_config
+from configs.model_configs.base_model_config import BaseModelConfig
 
 class Config:
 
@@ -30,15 +30,22 @@ class Config:
     aug_seis_noise_std = 0.01  # Std dev of Gaussian noise added to seismic data
 
     # --- Model params ---
-    model_prefix = model_config.model_prefix
-    n_epochs = model_config.n_epochs
-    learning_rate = model_config.learning_rate
-    weight_decay = model_config.weight_decay
-    plot_every_n_epochs = model_config.plot_every_n_epochs
-
+    model_prefix = None
+    n_epochs = None
+    learning_rate = None
+    weight_decay = None
+    plot_every_n_epochs = None
 
     # --- Misc ---
     seed = 42
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     autocast_dtype = torch.float16 if use_cuda else torch.bfloat16
+
+    @classmethod
+    def initialize_model_params_with(cls, model_config: BaseModelConfig):
+        cls.model_prefix = model_config.model_prefix
+        cls.n_epochs = model_config.n_epochs
+        cls.learning_rate = model_config.learning_rate
+        cls.weight_decay = model_config.weight_decay
+        cls.plot_every_n_epochs = model_config.plot_every_n_epochs
