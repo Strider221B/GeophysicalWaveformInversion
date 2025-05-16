@@ -2,6 +2,7 @@ import os
 import torch
 
 from configs.model_configs.base_model_config import BaseModelConfig
+from helpers.constants import Constants
 
 class Config:
 
@@ -10,6 +11,8 @@ class Config:
     shard_output_dir = "/kaggle/working/sharded_data"
     working_dir = "/kaggle/working/"
     submission_file = os.path.join(working_dir, "submission.csv")
+    gpu_local_rank = int(os.environ.get('RANK', 0))
+    gpu_world_size = int(os.environ.get('WORLD_SIZE', gpu_local_rank + 1))
 
     # --- Dataset Params ---
     dataset_name = "fwi_kaggle_only_augmented"
@@ -40,7 +43,7 @@ class Config:
     # --- Misc ---
     seed = 42
     use_cuda = torch.cuda.is_available()
-    device = torch.device("cuda" if use_cuda else "cpu")
+    device = torch.device(Constants.CUDA if use_cuda else Constants.CPU)
     autocast_dtype = torch.float16 if use_cuda else torch.bfloat16
 
     @classmethod

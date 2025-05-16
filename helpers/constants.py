@@ -1,5 +1,7 @@
 class Constants:
 
+    CPU = 'cpu'
+    CUDA = 'cuda'
     EXTN_MODEL = '.pth'
     EXTN_NUMPY = '*.npy'
     EXTN_SHARD = '.tar'

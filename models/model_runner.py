@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from tqdm.auto import tqdm
 from torch import nn
+from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
@@ -17,7 +18,7 @@ from configs.config import Config
 from helpers.constants import Constants
 from helpers.helper import Helper
 from helpers.kaggle_dataset import KaggleTestDataset
-from models.model_factory import ModelFactory
+from models.factories.model_factory import ModelFactory
 
 class ModelRunner:
 
@@ -27,7 +28,8 @@ class ModelRunner:
                     dataloader_validation: DataLoader,
                     model: nn.Module,
                     optimizer: Optimizer,
-                    loss_criterion) -> List[Dict[str, Any]]:
+                    loss_criterion,
+                    scheduler: LRScheduler) -> List[Dict[str, Any]]:
         history = []
         best_val_loss = float('inf')
 
@@ -42,6 +44,7 @@ class ModelRunner:
                                                dataloader_validation,
                                                optimizer,
                                                loss_criterion,
+                                               scheduler,
                                                history,
                                                best_val_loss)
 
@@ -71,7 +74,7 @@ class ModelRunner:
     def _predict_on_kaggle_test_data_using(cls, best_model_final_path: str):
         try:
             print(f"Loading model for final prediction: {os.path.basename(best_model_final_path)}")
-            model_pred = ModelFactory.initialize_just_model()
+            model_pred = ModelFactory.get_just_model()
             model_pred.load_state_dict(torch.load(best_model_final_path, map_location=Config.device))
             model_pred.eval()
 
@@ -175,6 +178,7 @@ class ModelRunner:
                    dataloader_validation: DataLoader,
                    optimizer: Optimizer,
                    loss_criterion,
+                   scheduler: LRScheduler,
                    history: List[Dict[str, Any]],
                    best_val_loss: float):
         print(f"\n=== Epoch {epoch}/{Config.n_epochs} ===")
@@ -207,6 +211,8 @@ class ModelRunner:
         avg_val_loss = np.mean(val_losses) if val_losses else float("inf")
         print(f"Epoch {epoch} Avg Valid Loss: {avg_val_loss:.5f}")
         history.append({"epoch": epoch, "train_loss": avg_train_loss, "valid_loss": avg_val_loss})
+
+        scheduler.step(avg_val_loss)
 
         # --- Save Best Model ---
         if avg_val_loss < best_val_loss:
