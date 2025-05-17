@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 
 from configs.config import Config
 from helpers.constants import Constants
+from helpers.logger import Logger
 
 class WebdatasetPreprocessing:
 
@@ -18,6 +19,8 @@ class WebdatasetPreprocessing:
     _NPY_SEIS = 'seis.npy'
     _NPY_VEL = 'vel.npy'
     _TXT_SAMPLE_ID = 'sample_id.txt'
+
+    _logger = Logger.get_logger()
 
     @classmethod
     def search_data_path(cls,
@@ -197,7 +200,7 @@ class WebdatasetPreprocessing:
                     Constants.VEL: vel_tensor}
 
         except Exception as map_e:
-            print(f"E: Map function failed for sample {key_info}: {map_e}")
+            cls._logger.exception(f"E: Map function failed for sample {key_info}: {map_e}")
             # Let the handler decide whether to skip or raise
             raise map_e
 

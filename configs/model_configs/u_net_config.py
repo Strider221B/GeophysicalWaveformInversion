@@ -10,9 +10,10 @@ class UNetConfig(BaseModelConfig):
 
     # --- Base Model Parameters ---
     model_prefix = 'unet_best_model'
-    n_epochs = 100
     learning_rate = 1e-4
     weight_decay = 1e-5
     plot_every_n_epochs = 5
     scheduler_factor = 0.1 # default
     scheduler_patience = 10 # default
+
+    _n_epochs = 100

@@ -195,9 +195,11 @@ class FileHandler:
         with wds.ShardWriter(shard_pattern, maxsize=int(Config.maxsize)) as writer:
             common_base_dir = kaggle_train_root  # For relative path key generation
             total_samples_written = 0
+            count = 0
             for in_file, out_file in tqdm(
                 kaggle_file_pairs, desc="Sharding Kaggle Data", unit="pair"
             ):
+                count += 1
                 # generate_sample handles potential errors for each pair
                 samples_from_pair = wdp.generate_sample(
                     Path(in_file), Path(out_file), base_dir=common_base_dir
@@ -206,6 +208,8 @@ class FileHandler:
                     for sample_dict in samples_from_pair:
                         writer.write(sample_dict)
                     total_samples_written += len(samples_from_pair)
+                if Config.trial_run and count > 4:
+                    break
 
         print(
             f"Finished writing {total_samples_written} samples from Kaggle source to shards."

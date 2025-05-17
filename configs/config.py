@@ -1,3 +1,4 @@
+import logging
 import os
 import torch
 
@@ -45,11 +46,13 @@ class Config:
     use_cuda = torch.cuda.is_available()
     device = torch.device(Constants.CUDA if use_cuda else Constants.CPU)
     autocast_dtype = torch.float16 if use_cuda else torch.bfloat16
+    log_level = logging.WARNING
+    trial_run = False
 
     @classmethod
     def initialize_model_params_with(cls, model_config: BaseModelConfig):
         cls.model_prefix = model_config.model_prefix
-        cls.n_epochs = model_config.n_epochs
+        cls.n_epochs = model_config.get_epochs(cls.trial_run)
         cls.learning_rate = model_config.learning_rate
         cls.weight_decay = model_config.weight_decay
         cls.plot_every_n_epochs = model_config.plot_every_n_epochs
