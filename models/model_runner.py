@@ -63,8 +63,8 @@ class ModelRunner:
         best_model_final_path = Helper.find_best_model()
         if not best_model_final_path:
             print("W: No best model found. Skipping final prediction.")
-        elif not Path(Config.kaggle_test_dir).is_dir():
-            print(f"W: Kaggle test directory '{Config.kaggle_test_dir}' not found. Skipping prediction.")
+        elif not Path(Config.test_dir).is_dir():
+            print(f"W: Kaggle test directory '{Config.test_dir}' not found. Skipping prediction.")
         else:
             cls._predict_on_kaggle_test_data_using(best_model_final_path)
 
@@ -78,7 +78,7 @@ class ModelRunner:
             model_pred.load_state_dict(torch.load(best_model_final_path, map_location=Config.device))
             model_pred.eval()
 
-            test_dataset = KaggleTestDataset(Config.kaggle_test_dir)
+            test_dataset = KaggleTestDataset(Config.test_dir)
             if len(test_dataset) == 0:
                 print("W: Kaggle test dataset is empty. No submission generated.")
                 return

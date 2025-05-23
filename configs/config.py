@@ -3,14 +3,16 @@ import os
 import torch
 
 from configs.model_configs.base_model_config import BaseModelConfig
+from configs.platform_configs.base_platform_config import BasePlatformConfig
 from helpers.constants import Constants
 
 class Config:
 
-    kaggle_train_dir = "/kaggle/input/waveform-inversion/train_samples"
-    kaggle_test_dir = "/kaggle/input/waveform-inversion/test"
-    shard_output_dir = "/kaggle/working/sharded_data"
-    working_dir = "/kaggle/working/"
+    working_dir = ''
+    shard_output_dir = ''
+    train_dir = ''
+    test_dir = ''
+
     submission_file = os.path.join(working_dir, "submission.csv")
     gpu_local_rank = int(os.environ.get('RANK', 0))
     gpu_world_size = int(os.environ.get('WORLD_SIZE', gpu_local_rank + 1))
@@ -50,9 +52,14 @@ class Config:
     trial_run = False
 
     @classmethod
-    def initialize_model_params_with(cls, model_config: BaseModelConfig):
+    def initialize_params_with(cls, model_config: BaseModelConfig, platform_config: BasePlatformConfig):
         cls.model_prefix = model_config.model_prefix
         cls.n_epochs = model_config.get_epochs(cls.trial_run)
         cls.learning_rate = model_config.learning_rate
         cls.weight_decay = model_config.weight_decay
         cls.plot_every_n_epochs = model_config.plot_every_n_epochs
+
+        cls.working_dir = platform_config.working_dir
+        cls.shard_output_dir = platform_config.shard_output_dir
+        cls.train_dir = platform_config.train_dir
+        cls.test_dir = platform_config.test_dir

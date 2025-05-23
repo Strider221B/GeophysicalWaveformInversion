@@ -43,7 +43,7 @@ class FileHandler:
     @classmethod
     def shard_from_kaggle_data(cls):
         shard_stage_dir = Path(Config.shard_output_dir) / f"train_{Config.dataset_name}"
-        kaggle_train_root = Path(Config.kaggle_train_dir)
+        kaggle_train_root = Path(Config.train_dir)
 
         try:
             shards_need_creation = cls._does_shards_need_to_be_created(shard_stage_dir)
