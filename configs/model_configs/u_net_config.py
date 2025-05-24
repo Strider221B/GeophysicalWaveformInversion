@@ -1,3 +1,4 @@
+import torch
 from configs.model_configs.base_model_config import BaseModelConfig
 
 class UNetConfig(BaseModelConfig):
@@ -15,5 +16,6 @@ class UNetConfig(BaseModelConfig):
     plot_every_n_epochs = 5
     scheduler_factor = 0.1 # default
     scheduler_patience = 10 # default
+    autocast_dtype = torch.float16 if BaseModelConfig.use_cuda else torch.bfloat16
 
     _n_epochs = 100

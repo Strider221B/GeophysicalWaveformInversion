@@ -17,11 +17,14 @@ from torch.utils.data import DataLoader
 from configs.config import Config
 from helpers.constants import Constants
 from helpers.helper import Helper
+from helpers.logger import Logger
 from helpers.kaggle_dataset import KaggleTestDataset
 from models.factories.model_factory import ModelFactory
 from models.model_ema import ModelEMA
 
 class ModelRunner:
+
+    _logger = Logger.get_logger()
 
     @classmethod
     def train_model(cls,
@@ -35,7 +38,7 @@ class ModelRunner:
         best_val_loss = float('inf')
 
         if dataloader_train is None or model is None:
-            print("E: Training cannot proceed. Train DataLoader or Model is missing.")
+            cls._logger.error("Training cannot proceed. Train DataLoader or Model is missing.")
             return history
         try:
             for epoch in range(1, Config.n_epochs + 1):
@@ -50,38 +53,37 @@ class ModelRunner:
                                                best_val_loss)
 
         except KeyboardInterrupt:
-            print("\n--- Training interrupted by user ---")
+            cls._logger.warning("--- Training interrupted by user ---")
         except Exception as e:
-            print(f"\nE: Training loop encountered a critical error: {e}")
-            traceback.print_exc()
+            cls._logger.exception(f"Training loop encountered a critical error: {e}")
         finally:
-            print("\n--- Training Loop Finished ---")
+            cls._logger.info("--- Training Loop Finished ---")
         return history
 
     @classmethod
     def predict_on_kaggle_test_data(cls):
-        print("\n --- Final Prediction on Kaggle Test Set ---")
+        cls._logger.info("--- Final Prediction on Kaggle Test Set ---")
         best_model_final_path = Helper.find_best_model()
         if not best_model_final_path:
-            print("W: No best model found. Skipping final prediction.")
+            cls._logger.warning("No best model found. Skipping final prediction.")
         elif not Path(Config.test_dir).is_dir():
-            print(f"W: Kaggle test directory '{Config.test_dir}' not found. Skipping prediction.")
+            cls._logger.warning(f"Kaggle test directory '{Config.test_dir}' not found. Skipping prediction.")
         else:
             cls._predict_on_kaggle_test_data_using(best_model_final_path)
 
-        print("\n--- Full Workflow Finished ---")
+        cls._logger.info("\n--- Full Workflow Finished ---")
 
     @classmethod
     def _predict_on_kaggle_test_data_using(cls, best_model_final_path: str):
         try:
-            print(f"Loading model for final prediction: {os.path.basename(best_model_final_path)}")
+            cls._logger.info(f"Loading model for final prediction: {os.path.basename(best_model_final_path)}")
             model_pred = ModelFactory.get_just_model()
             model_pred.load_state_dict(torch.load(best_model_final_path, map_location=Config.device))
             model_pred.eval()
 
             test_dataset = KaggleTestDataset(Config.test_dir)
             if len(test_dataset) == 0:
-                print("W: Kaggle test dataset is empty. No submission generated.")
+                cls._logger.warning("Kaggle test dataset is empty. No submission generated.")
                 return
             # Setup DataLoader for test set
             # Use slightly smaller batch size and fewer workers for inference if needed
@@ -95,23 +97,22 @@ class ModelRunner:
                 num_workers=test_num_workerd,
                 pin_memory=Config.use_cuda,
             )
-            print(f"Test DataLoader created with bs={test_batch_size}, workers={test_num_workerd}")
-            print(f"Writing submission file to: {Config.submission_file}")
+            cls._logger.info(f"Test DataLoader created with bs={test_batch_size}, workers={test_num_workerd}")
+            cls._logger.info(f"Writing submission file to: {Config.submission_file}")
 
             with open(Config.submission_file, "wt", newline="") as csvfile:
                 rows_written = cls._write_submission_file(csvfile, dataloader_test, model_pred)
 
-            print(f"Submission file created: {Config.submission_file} ({rows_written} rows).")
+            cls._logger.info(f"Submission file created: {Config.submission_file} ({rows_written} rows).")
             # Sanity check row count
             expected_rows = len(test_dataset) * 70  # 70 y-positions per test sample
             if rows_written != expected_rows:
-                print(
-                    f"W: Row count mismatch! Expected {expected_rows}, but wrote {rows_written}."
+                cls._logger.warning(
+                    f"Row count mismatch! Expected {expected_rows}, but wrote {rows_written}."
                 )
 
         except Exception as e:
-            print(f"E: Final prediction process failed critically: {e}")
-            traceback.print_exc()
+            cls._logger.exception(f"Final prediction process failed critically: {e}")
 
     @classmethod
     def _write_submission_file(cls,
@@ -166,8 +167,8 @@ class ModelRunner:
                     rows_written += 1
         except Exception as e:
             # Report error but continue if possible
-            print(
-                f"\nE: Prediction failed for batch (OID: {original_ids[0] if original_ids else '?'}) : {e}"
+            cls._logger.exception(
+                f"Prediction failed for batch (OID: {original_ids[0] if original_ids else '?'}) : {e}"
             )
         return rows_written
 
@@ -182,7 +183,7 @@ class ModelRunner:
                    scheduler: LRScheduler,
                    history: List[Dict[str, Any]],
                    best_val_loss: float):
-        print(f"\n=== Epoch {epoch}/{Config.n_epochs} ===")
+        cls._logger.info(f"=== Epoch {epoch}/{Config.n_epochs} ===")
         # --- Training Phase ---
         gc.collect()
         if Config.use_cuda:
@@ -195,11 +196,11 @@ class ModelRunner:
             cls._train_batch(batch, i, optimizer, model, loss_criterion, train_losses, progess_bar_train, model_ema)
 
         avg_train_loss = np.mean(train_losses) if train_losses else 0.0
-        print(f"Epoch {epoch} Avg Train Loss: {avg_train_loss:.5f}")
+        cls._logger.info(f"Epoch {epoch} Avg Train Loss: {avg_train_loss:.5f}")
 
         # --- Validation Phase ---
         if dataloader_validation is None:
-            print("W: Skipping validation phase - no validation DataLoader.")
+            cls._logger.warning("Skipping validation phase - no validation DataLoader.")
             history.append({"epoch": epoch, "train_loss": avg_train_loss, "valid_loss": None})
             return best_val_loss # Skip to next epoch
 
@@ -211,7 +212,7 @@ class ModelRunner:
                 cls._run_validation_batch(batch, model, loss_criterion, val_losses, i, epoch, model_ema)
 
         avg_val_loss = np.mean(val_losses) if val_losses else float("inf")
-        print(f"Epoch {epoch} Avg Valid Loss: {avg_val_loss:.5f}")
+        cls._logger.info(f"Epoch {epoch} Avg Valid Loss: {avg_val_loss:.5f}")
         history.append({"epoch": epoch, "train_loss": avg_train_loss, "valid_loss": avg_val_loss})
 
         scheduler.step(avg_val_loss)
@@ -233,25 +234,25 @@ class ModelRunner:
         # Save the new best model
         fname = f"{Config.model_prefix}_epoch_{epoch}_loss_{best_val_loss:.4f}{Constants.EXTN_MODEL}"
         fpath = os.path.join(Config.working_dir, fname)
-        print(f"*** New best validation loss: {best_val_loss:.5f}. Saving model: {fname} ***")
+        cls._logger.info(f"*** New best validation loss: {best_val_loss:.5f}. Saving model: {fname} ***")
         if model_ema:
             model_state = model_ema.get_module().state_dict()
         else:
             model_state = model.state_dict()
         torch.save(model_state, fpath)
 
-    @staticmethod
-    def _remove_old_best_model():
+    @classmethod
+    def _remove_old_best_model(cls):
         # Clean previous best models before saving new one
         del_pattern = os.path.join(
             Config.working_dir, f"{Config.model_prefix}_epoch_*_loss_*{Constants.EXTN_MODEL}"
         )
         for old_model_path in glob.glob(del_pattern):
             try:
-                print(f"Removing model: {os.path.basename(old_model_path)}")
+                cls._logger.info(f"Removing model: {os.path.basename(old_model_path)}")
                 os.remove(old_model_path)
             except OSError as e:
-                print(f"W: Could not delete old model {old_model_path}: {e}")
+                cls._logger.exception(f"Could not delete old model {old_model_path}: {e}")
 
     @classmethod
     def _run_validation_batch(cls,
@@ -285,9 +286,9 @@ class ModelRunner:
                 pass # Placeholder
 
         except Exception as e:
-            print(f"\nE: Validation batch {batch_index} failed: {e}")
+            cls._logger.exception(f"Validation batch {batch_index} failed: {e}")
             if isinstance(e, torch.cuda.OutOfMemoryError):
-                print("E: CUDA Out of Memory during validation. Exiting.")
+                cls._logger.error("CUDA Out of Memory during validation. Exiting.")
                 raise e
             # Continue on other errors if desired, or raise
             # raise e # Uncomment to stop on any validation error
@@ -331,10 +332,10 @@ class ModelRunner:
                 pbar_train.set_postfix(loss=f"{np.mean(train_losses):.5f}")
 
         except Exception as e:
-            print(f"\nE: Training batch {batch_index} failed: {e}")
+            cls._logger.exception(f"Training batch {batch_index} failed: {e}")
             # Stop training on OOM error
             if isinstance(e, torch.cuda.OutOfMemoryError):
-                print("E: CUDA Out of Memory during training. Exiting.")
+                cls._logger.error("CUDA Out of Memory during training. Exiting.")
                 raise e
             # Continue on other errors if desired, or raise
             # raise e # Uncomment to stop on any training error

@@ -1,3 +1,7 @@
+import torch
+
+from helpers.constants import Constants
+
 class BaseModelConfig:
 
     model_prefix = None
@@ -6,6 +10,10 @@ class BaseModelConfig:
     plot_every_n_epochs = None
     scheduler_factor = None
     scheduler_patience = None
+    use_cuda = torch.cuda.is_available()
+    device = torch.device(Constants.CUDA if use_cuda else Constants.CPU)
+    autocast_dtype = None
+
 
     _n_epochs = None
 

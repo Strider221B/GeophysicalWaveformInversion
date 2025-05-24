@@ -45,9 +45,9 @@ class Config:
 
     # --- Misc ---
     seed = 42
-    use_cuda = torch.cuda.is_available()
-    device = torch.device(Constants.CUDA if use_cuda else Constants.CPU)
-    autocast_dtype = torch.float16 if use_cuda else torch.bfloat16
+    use_cuda = False
+    device = None
+    autocast_dtype = None
     log_level = logging.WARNING
     trial_run = False
 
@@ -58,6 +58,9 @@ class Config:
         cls.learning_rate = model_config.learning_rate
         cls.weight_decay = model_config.weight_decay
         cls.plot_every_n_epochs = model_config.plot_every_n_epochs
+        cls.use_cuda = model_config.use_cuda
+        cls.device = model_config.device
+        cls.autocast_dtype = model_config.autocast_dtype
 
         cls.working_dir = platform_config.working_dir
         cls.shard_output_dir = platform_config.shard_output_dir

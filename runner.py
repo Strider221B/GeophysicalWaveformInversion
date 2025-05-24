@@ -1,6 +1,6 @@
 from configs.config import Config
 from configs.model_configs.base_model_config import BaseModelConfig
-from configs.model_configs.u_net_config import UNetConfig
+from configs.model_configs.hg_net_v2_config import HG_Net_V2_Config
 from configs.platform_configs.base_platform_config import BasePlatformConfig
 from configs.platform_configs.local_config import LocalConfig
 from helpers.file_handler import FileHandler
@@ -28,4 +28,4 @@ class Runner:
 
 if __name__ == '__main__':
     Config.trial_run = True
-    Runner.run(UNetConfig, LocalConfig)
+    Runner.run(HG_Net_V2_Config, LocalConfig)

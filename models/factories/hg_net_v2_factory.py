@@ -40,6 +40,6 @@ class HGNetV2Factory(FactoryBase):
     @staticmethod
     def get_just_model() -> nn.Module:
         model = HGUNet(HG_Net_V2_Config.backbone)
-        if Config.device == Constants.CUDA:
+        if Config.device.type == Constants.CUDA:
             model = model.to(Config.gpu_local_rank)
         return model
