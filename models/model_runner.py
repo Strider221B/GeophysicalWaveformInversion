@@ -19,6 +19,7 @@ from helpers.constants import Constants
 from helpers.helper import Helper
 from helpers.kaggle_dataset import KaggleTestDataset
 from models.factories.model_factory import ModelFactory
+from models.model_ema import ModelEMA
 
 class ModelRunner:
 
@@ -186,11 +187,12 @@ class ModelRunner:
         gc.collect()
         if Config.use_cuda:
             torch.cuda.empty_cache()
+        model_ema = ModelEMA(model, decay=Config.weight_decay, device=Config.gpu_local_rank)
         model.train()
         train_losses = []
         progess_bar_train = tqdm(dataloader_train, desc=f"Train E{epoch}", leave=False, unit="batch")
         for i, batch in enumerate(progess_bar_train):
-            cls._train_batch(batch, i, optimizer, model, loss_criterion, train_losses, progess_bar_train)
+            cls._train_batch(batch, i, optimizer, model, loss_criterion, train_losses, progess_bar_train, model_ema)
 
         avg_train_loss = np.mean(train_losses) if train_losses else 0.0
         print(f"Epoch {epoch} Avg Train Loss: {avg_train_loss:.5f}")
@@ -206,7 +208,7 @@ class ModelRunner:
         pbar_val = tqdm(dataloader_validation, desc=f"Valid E{epoch}", leave=False, unit="batch")
         with torch.no_grad():
             for i, batch in enumerate(pbar_val):
-                cls._run_validation_batch(batch, model, loss_criterion, val_losses, i, epoch)
+                cls._run_validation_batch(batch, model, loss_criterion, val_losses, i, epoch, model_ema)
 
         avg_val_loss = np.mean(val_losses) if val_losses else float("inf")
         print(f"Epoch {epoch} Avg Valid Loss: {avg_val_loss:.5f}")
@@ -217,7 +219,7 @@ class ModelRunner:
         # --- Save Best Model ---
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            cls._save_model(best_val_loss, epoch, model)
+            cls._save_model(best_val_loss, epoch, model, model_ema)
 
         return best_val_loss
 
@@ -225,13 +227,18 @@ class ModelRunner:
     def _save_model(cls,
                     best_val_loss: float,
                     epoch: int,
-                    model: nn.Module):
+                    model: nn.Module,
+                    model_ema: ModelEMA):
         cls._remove_old_best_model()
         # Save the new best model
         fname = f"{Config.model_prefix}_epoch_{epoch}_loss_{best_val_loss:.4f}{Constants.EXTN_MODEL}"
         fpath = os.path.join(Config.working_dir, fname)
         print(f"*** New best validation loss: {best_val_loss:.5f}. Saving model: {fname} ***")
-        torch.save(model.state_dict(), fpath)
+        if model_ema:
+            model_state = model_ema.get_module().state_dict()
+        else:
+            model_state = model.state_dict()
+        torch.save(model_state, fpath)
 
     @staticmethod
     def _remove_old_best_model():
@@ -253,7 +260,8 @@ class ModelRunner:
                               loss_criterion,
                               val_losses: List[float],
                               batch_index: int,
-                              epoch: int):
+                              epoch: int,
+                              model_ema: ModelEMA):
         if cls._is_batch_valid(batch) is False:
             return
         try:
@@ -264,7 +272,10 @@ class ModelRunner:
                 dtype=Config.autocast_dtype,
                 enabled=Config.use_cuda,
             ):
-                outputs = model(inputs)
+                if model_ema:
+                    outputs = model_ema.get_module()(inputs)
+                else:
+                    outputs = model(inputs)
                 loss = loss_criterion(outputs, targets)
             val_losses.append(loss.item())
 
@@ -289,7 +300,8 @@ class ModelRunner:
                      model: nn.Module,
                      loss_criterion,
                      train_losses: List[float],
-                     pbar_train: tqdm):
+                     pbar_train: tqdm,
+                     model_ema: ModelEMA):
         if cls._is_batch_valid(batch) is False:
             return
         try:
@@ -310,6 +322,9 @@ class ModelRunner:
             loss.backward()
             optimizer.step()
             train_losses.append(loss.item())
+
+            if model_ema is not None:
+                model_ema.update(model)
 
             # Update progress bar description
             if batch_index % 100 == 0:

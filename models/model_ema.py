@@ -13,6 +13,9 @@ class ModelEMA(nn.Module):
         if self._device is not None:
             self._module.to(device=device)
 
+    def get_module(self) -> nn.Module:
+        return self._module
+
     def update(self, model):
         self._update(model, update_fn=lambda e, m: self._decay * e + (1. - self._decay) * m)
 

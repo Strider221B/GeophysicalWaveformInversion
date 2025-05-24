@@ -27,4 +27,5 @@ class Runner:
         ModelRunner.predict_on_kaggle_test_data()
 
 if __name__ == '__main__':
+    Config.trial_run = True
     Runner.run(UNetConfig, LocalConfig)

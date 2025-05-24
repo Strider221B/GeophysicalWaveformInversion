@@ -10,7 +10,6 @@ from configs.model_configs.hg_net_v2_config import HG_Net_V2_Config
 from helpers.constants import Constants
 from models.factories.factory_base import FactoryBase
 from models.hg_net_v2.hg_unet import HGUNet
-from models.model_ema import ModelEMA
 
 class HGNetV2Factory(FactoryBase):
 
@@ -43,5 +42,4 @@ class HGNetV2Factory(FactoryBase):
         model = HGUNet(HG_Net_V2_Config.backbone)
         if Config.device == Constants.CUDA:
             model = model.to(Config.gpu_local_rank)
-        model = ModelEMA(model)
         return model
