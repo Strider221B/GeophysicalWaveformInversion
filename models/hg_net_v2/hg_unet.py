@@ -2,6 +2,7 @@ import timm
 import torch
 from torch import nn
 
+from helpers.helper import Helper
 from models.hg_net_v2.segmentation_head_2d import SegmentationHead2d
 from models.hg_net_v2.unet_decoder_2d import UnetDecoder2d
 
@@ -31,6 +32,7 @@ class HGUNet(nn.Module):
         self._update_stem()
 
     def forward(self, x: torch.Tensor):
+        x = Helper.compress_sample(x) # Updates shape from (16, 5, 1000, 70) to (16, 5, 72, 72)
         x_in = x
         x_seg = self._forward_steps(x)
 
