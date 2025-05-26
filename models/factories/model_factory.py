@@ -23,8 +23,8 @@ class ModelFactory(FactoryBase):
 
     @staticmethod
     def _get_factory_class() -> FactoryBase:
-        if Config.model_prefix == UNetConfig.model_prefix:
+        if Config.get_model_prefix() == UNetConfig.model_prefix:
             return UnetFactory
-        if Config.model_prefix == HG_Net_V2_Config.model_prefix:
+        if Config.get_model_prefix() == HG_Net_V2_Config.model_prefix:
             return HGNetV2Factory
         raise ValueError('Invalid model provided.')

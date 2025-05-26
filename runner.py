@@ -11,8 +11,8 @@ from models.model_runner import ModelRunner
 class Runner:
 
     @staticmethod
-    def run(model_config: BaseModelConfig, platform_config: BasePlatformConfig):
-        Config.initialize_params_with(model_config, platform_config)
+    def run(model_config: BaseModelConfig, platform_config: BasePlatformConfig, use_multiple_gpus: bool):
+        Config.initialize_params_with(model_config, platform_config, use_multiple_gpus)
         FileHandler.clean_up()
         FileHandler.shard_from_kaggle_data()
         _, dataloader_train, dataloader_validation = FileHandler.create_data_loaders_from_shards()
@@ -28,4 +28,4 @@ class Runner:
 
 if __name__ == '__main__':
     Config.trial_run = True
-    Runner.run(HG_Net_V2_Config, LocalConfig)
+    Runner.run(HG_Net_V2_Config, LocalConfig, False)

@@ -2,7 +2,6 @@ import csv
 import gc
 import glob
 import os
-import traceback
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -41,7 +40,7 @@ class ModelRunner:
             cls._logger.error("Training cannot proceed. Train DataLoader or Model is missing.")
             return history
         try:
-            for epoch in range(1, Config.n_epochs + 1):
+            for epoch in range(1, Config.get_n_epochs() + 1):
                 best_val_loss = cls._train_for(epoch,
                                                model,
                                                dataloader_train,
@@ -63,11 +62,11 @@ class ModelRunner:
     @classmethod
     def predict_on_kaggle_test_data(cls):
         cls._logger.info("--- Final Prediction on Kaggle Test Set ---")
-        best_model_final_path = Helper.find_best_model()
+        best_model_final_path = Helper.find_best_model_path(Config.get_working_dir(), Config.get_model_prefix())
         if not best_model_final_path:
             cls._logger.warning("No best model found. Skipping final prediction.")
-        elif not Path(Config.test_dir).is_dir():
-            cls._logger.warning(f"Kaggle test directory '{Config.test_dir}' not found. Skipping prediction.")
+        elif not Path(Config.get_test_dir()).is_dir():
+            cls._logger.warning(f"Kaggle test directory '{Config.get_test_dir()}' not found. Skipping prediction.")
         else:
             cls._predict_on_kaggle_test_data_using(best_model_final_path)
 
@@ -78,10 +77,10 @@ class ModelRunner:
         try:
             cls._logger.info(f"Loading model for final prediction: {os.path.basename(best_model_final_path)}")
             model_pred = ModelFactory.get_just_model()
-            model_pred.load_state_dict(torch.load(best_model_final_path, map_location=Config.device))
+            model_pred.load_state_dict(torch.load(best_model_final_path, map_location=Config.get_device()))
             model_pred.eval()
 
-            test_dataset = KaggleTestDataset(Config.test_dir)
+            test_dataset = KaggleTestDataset(Config.get_test_dir())
             if len(test_dataset) == 0:
                 cls._logger.warning("Kaggle test dataset is empty. No submission generated.")
                 return
@@ -95,15 +94,15 @@ class ModelRunner:
                 batch_size=test_batch_size,
                 shuffle=False,
                 num_workers=test_num_workerd,
-                pin_memory=Config.use_cuda,
+                pin_memory=Config.get_use_cuda(),
             )
             cls._logger.info(f"Test DataLoader created with bs={test_batch_size}, workers={test_num_workerd}")
-            cls._logger.info(f"Writing submission file to: {Config.submission_file}")
+            cls._logger.info(f"Writing submission file to: {Config.get_submission_file()}")
 
-            with open(Config.submission_file, "wt", newline="") as csvfile:
+            with open(Config.get_submission_file(), "wt", newline="") as csvfile:
                 rows_written = cls._write_submission_file(csvfile, dataloader_test, model_pred)
 
-            cls._logger.info(f"Submission file created: {Config.submission_file} ({rows_written} rows).")
+            cls._logger.info(f"Submission file created: {Config.get_submission_file()} ({rows_written} rows).")
             # Sanity check row count
             expected_rows = len(test_dataset) * 70  # 70 y-positions per test sample
             if rows_written != expected_rows:
@@ -144,11 +143,11 @@ class ModelRunner:
         if isinstance(original_ids, str):
             original_ids = [original_ids]
         try:
-            inputs = inputs.to(Config.device).float()
+            inputs = inputs.to(Config.get_device()).float()
             with torch.amp.autocast(
-                device_type=Config.device.type,
-                dtype=Config.autocast_dtype,
-                enabled=Config.use_cuda,
+                device_type=Config.get_device().type,
+                dtype=Config.get_autocast_dtype(),
+                enabled=Config.get_use_cuda(),
             ):
                 outputs = model_pred(inputs)
             # Output shape is (B, 1, H, W), get predictions (B, H, W)
@@ -183,12 +182,12 @@ class ModelRunner:
                    scheduler: LRScheduler,
                    history: List[Dict[str, Any]],
                    best_val_loss: float):
-        cls._logger.info(f"=== Epoch {epoch}/{Config.n_epochs} ===")
+        cls._logger.info(f"=== Epoch {epoch}/{Config.get_n_epochs()} ===")
         # --- Training Phase ---
         gc.collect()
-        if Config.use_cuda:
+        if Config.get_use_cuda():
             torch.cuda.empty_cache()
-        model_ema = ModelEMA(model, decay=Config.weight_decay, device=Config.gpu_local_rank)
+        model_ema = ModelEMA(model, decay=Config.get_weight_decay(), device=Config.get_gpu_local_rank())
         model.train()
         train_losses = []
         progess_bar_train = tqdm(dataloader_train, desc=f"Train E{epoch}", leave=False, unit="batch")
@@ -232,8 +231,8 @@ class ModelRunner:
                     model_ema: ModelEMA):
         cls._remove_old_best_model()
         # Save the new best model
-        fname = f"{Config.model_prefix}_epoch_{epoch}_loss_{best_val_loss:.4f}{Constants.EXTN_MODEL}"
-        fpath = os.path.join(Config.working_dir, fname)
+        fname = f"{Config.get_model_prefix()}_epoch_{epoch}_loss_{best_val_loss:.4f}{Constants.EXTN_MODEL}"
+        fpath = os.path.join(Config.get_working_dir(), fname)
         cls._logger.info(f"*** New best validation loss: {best_val_loss:.5f}. Saving model: {fname} ***")
         if model_ema:
             model_state = model_ema.get_module().state_dict()
@@ -245,7 +244,7 @@ class ModelRunner:
     def _remove_old_best_model(cls):
         # Clean previous best models before saving new one
         del_pattern = os.path.join(
-            Config.working_dir, f"{Config.model_prefix}_epoch_*_loss_*{Constants.EXTN_MODEL}"
+            Config.get_working_dir(), f"{Config.get_model_prefix()}_epoch_*_loss_*{Constants.EXTN_MODEL}"
         )
         for old_model_path in glob.glob(del_pattern):
             try:
@@ -266,12 +265,12 @@ class ModelRunner:
         if cls._is_batch_valid(batch) is False:
             return
         try:
-            inputs = batch["seis"].to(Config.device, non_blocking=True).float()
-            targets = batch["vel"].to(Config.device, non_blocking=True).float()
+            inputs = batch["seis"].to(Config.get_device(), non_blocking=True).float()
+            targets = batch["vel"].to(Config.get_device(), non_blocking=True).float()
             with torch.amp.autocast(
-                device_type=Config.device.type,
-                dtype=Config.autocast_dtype,
-                enabled=Config.use_cuda,
+                device_type=Config.get_device().type,
+                dtype=Config.get_autocast_dtype(),
+                enabled=Config.get_use_cuda(),
             ):
                 if model_ema:
                     outputs = model_ema.get_module()(inputs)
@@ -281,7 +280,7 @@ class ModelRunner:
             val_losses.append(loss.item())
 
             # Plotting validation examples periodically
-            if batch_index == 0 and epoch % Config.plot_every_n_epochs == 0:
+            if batch_index == 0 and epoch % Config.get_plot_every_n_epochs() == 0:
                 # Add validation plotting code here if desired
                 pass # Placeholder
 
@@ -306,15 +305,15 @@ class ModelRunner:
         if cls._is_batch_valid(batch) is False:
             return
         try:
-            inputs = batch["seis"].to(Config.device, non_blocking=True).float()
-            targets = batch["vel"].to(Config.device, non_blocking=True).float()
+            inputs = batch["seis"].to(Config.get_device(), non_blocking=True).float()
+            targets = batch["vel"].to(Config.get_device(), non_blocking=True).float()
 
             optimizer.zero_grad(set_to_none=True)
             # Use Automatic Mixed Precision (AMP) if on CUDA
             with torch.amp.autocast(
-                device_type=Config.device.type,
-                dtype=Config.autocast_dtype,
-                enabled=Config.use_cuda,
+                device_type=Config.get_device().type,
+                dtype=Config.get_autocast_dtype(),
+                enabled=Config.get_use_cuda(),
             ):
                 outputs = model(inputs)
                 loss = loss_criterion(outputs, targets)

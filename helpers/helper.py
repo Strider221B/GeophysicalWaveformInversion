@@ -19,7 +19,7 @@ class Helper:
         os.environ["PYTHONHASHSEED"] = str(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        if Config.use_cuda:
+        if Config.get_use_cuda():
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             # Ensure reproducibility if desired, may impact performance
@@ -28,7 +28,7 @@ class Helper:
         print(f"Seed set to {seed}")
 
     @classmethod
-    def find_best_model(cls, model_dir=Config.working_dir, model_prefix=Config.model_prefix):
+    def find_best_model_path(cls, model_dir: str, model_prefix: str) -> str:
         """
         Finds the best model file based on filename pattern (lowest loss).
         Falls back to most recently created/modified if pattern fails or doesn't exist.
@@ -58,9 +58,9 @@ class Helper:
     @classmethod
     def initialize(cls):
         cls.set_seed(Config.seed)
-        print(f"Device: {Config.device}")
+        print(f"Device: {Config.get_device()}")
         print(f"Using PyTorch version: {torch.__version__}")
-        if Config.use_cuda:
+        if Config.get_use_cuda():
             print(f"CUDA available: {torch.cuda.get_device_name(0)}")
 
     @staticmethod

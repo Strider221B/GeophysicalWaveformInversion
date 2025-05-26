@@ -37,4 +37,4 @@ class UnetFactory(FactoryBase):
 
     @staticmethod
     def get_just_model() -> UNet:
-        return UNet().to(Config.device)
+        return UNet().to(Config.get_device())

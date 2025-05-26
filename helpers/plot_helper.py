@@ -32,7 +32,7 @@ class PlotHelper:
                 plt.grid(True, linestyle="--", alpha=0.6)
                 plt.ylim(bottom=0)  # Loss should not be negative
                 plt.tight_layout()
-                plot_fname = os.path.join(Config.working_dir, Constants.PNG_TRAINING_HISTORY)
+                plot_fname = os.path.join(Config.get_working_dir(), Constants.PNG_TRAINING_HISTORY)
                 plt.savefig(plot_fname)
                 print(f"Saved history plot: {plot_fname}")
                 plt.show()  # Display the plot

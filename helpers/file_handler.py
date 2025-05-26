@@ -18,13 +18,13 @@ class FileHandler:
 
     @staticmethod
     def clean_up():
-        paths_to_clean = [Config.shard_output_dir]
+        paths_to_clean = [Config.get_shard_output_dir()]
         # Find previous best model files based on pattern
-        model_pattern = os.path.join(Config.working_dir, f"{Config.model_prefix}_epoch_*_loss_*{Constants.EXTN_MODEL}")
+        model_pattern = os.path.join(Config.get_working_dir(), f"{Config.get_model_prefix()}_epoch_*_loss_*{Constants.EXTN_MODEL}")
         paths_to_clean.extend(glob.glob(model_pattern))
         # Add plot and submission files
-        paths_to_clean.append(os.path.join(Config.working_dir, Constants.PNG_TRAINING_HISTORY))
-        paths_to_clean.append(Config.submission_file)
+        paths_to_clean.append(os.path.join(Config.get_working_dir(), Constants.PNG_TRAINING_HISTORY))
+        paths_to_clean.append(Config.get_submission_file())
 
         for path_str in paths_to_clean:
             path_obj = Path(path_str)
@@ -42,8 +42,8 @@ class FileHandler:
 
     @classmethod
     def shard_from_kaggle_data(cls):
-        shard_stage_dir = Path(Config.shard_output_dir) / f"train_{Config.dataset_name}"
-        kaggle_train_root = Path(Config.train_dir)
+        shard_stage_dir = Path(Config.get_shard_output_dir()) / f"train_{Config.dataset_name}"
+        kaggle_train_root = Path(Config.get_train_dir())
 
         try:
             shards_need_creation = cls._does_shards_need_to_be_created(shard_stage_dir)
@@ -69,7 +69,7 @@ class FileHandler:
         dataloader_train, dataloader_validation = None, None
         validation_paths = []  # Keep track of validation paths for potential later use
         try:
-            trn_paths, val_paths = wdp.get_shard_paths(Config.shard_output_dir,
+            trn_paths, val_paths = wdp.get_shard_paths(Config.get_shard_output_dir(),
                                                        Config.dataset_name,
                                                        Constants.TRAIN,  # Request splitting
                                                        num_shards=Config.num_used_shards,
@@ -81,7 +81,7 @@ class FileHandler:
                 raise RuntimeError("Failed to get or split shard paths for train/val.")
 
             # Check if any shards actually exist if paths were returned empty
-            shard_check_dir = Path(Config.shard_output_dir) / f"train_{Config.dataset_name}"
+            shard_check_dir = Path(Config.get_shard_output_dir()) / f"train_{Config.dataset_name}"
             if not list(shard_check_dir.glob(f"*{Constants.EXTN_SHARD}")):
                 raise RuntimeError(
                     f"No training shards selected AND no .tar files found in {shard_check_dir}."
@@ -148,7 +148,7 @@ class FileHandler:
                                 batch_size=None,  # Already batched by WebDataset
                                 shuffle=False,  # Shuffling done by WebDataset
                                 num_workers=n_trn_w,
-                                pin_memory=Config.use_cuda,
+                                pin_memory=Config.get_use_cuda(),
                                 persistent_workers=p_trn,
                                 prefetch_factor=2 if p_trn else None) # Only relevant if num_workers > 0
         print(f"DataLoader created with {n_trn_w} workers.")
@@ -232,9 +232,9 @@ class FileHandler:
     def _check_sufficient_disk_space():
         print("\n--- Checking Disk Space Before Directory Creation ---")
         try:
-            total, used, free = shutil.disk_usage(Config.working_dir)
+            total, used, free = shutil.disk_usage(Config.get_working_dir())
             print(
-                f"Disk Usage for {Config.working_dir}: Total={total / 1e9:.2f}GB, Used={used / 1e9:.2f}GB, Free={free / 1e9:.2f}GB"
+                f"Disk Usage for {Config.get_working_dir()}: Total={total / 1e9:.2f}GB, Used={used / 1e9:.2f}GB, Free={free / 1e9:.2f}GB"
             )
         except Exception as du_e:
             print(f"W: Could not check disk usage: {du_e}")
@@ -242,7 +242,7 @@ class FileHandler:
     @staticmethod
     def _create_output_dirs(shard_stage_dir: Path):
         try:
-            Path(Config.shard_output_dir).mkdir(parents=True, exist_ok=True)
+            Path(Config.get_shard_output_dir()).mkdir(parents=True, exist_ok=True)
             shard_stage_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             print(f"E: Critical error creating output directories: {e}")
