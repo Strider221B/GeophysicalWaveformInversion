@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 
 from configs.config import Config
 from helpers.constants import Constants
+from helpers.gpu_helper import GPUHelper
 from helpers.helper import Helper
 from helpers.logger import Logger
 from helpers.kaggle_dataset import KaggleTestDataset
@@ -24,6 +25,7 @@ from models.model_ema import ModelEMA
 class ModelRunner:
 
     _logger = Logger.get_logger()
+    _MINIMUM_REQUIRED_IMPROVEMENT_PER_EPOCH = 1e-5
 
     @classmethod
     def train_model(cls,
@@ -35,12 +37,14 @@ class ModelRunner:
                     scheduler: LRScheduler) -> List[Dict[str, Any]]:
         history = []
         best_val_loss = float('inf')
+        epochs_without_improvement = 0
 
         if dataloader_train is None or model is None:
             cls._logger.error("Training cannot proceed. Train DataLoader or Model is missing.")
             return history
         try:
             for epoch in range(1, Config.get_n_epochs() + 1):
+                prev_best_val_loss = best_val_loss
                 best_val_loss = cls._train_for(epoch,
                                                model,
                                                dataloader_train,
@@ -50,6 +54,8 @@ class ModelRunner:
                                                scheduler,
                                                history,
                                                best_val_loss)
+                if cls._is_early_stopping_required(best_val_loss, prev_best_val_loss):
+                    break
 
         except KeyboardInterrupt:
             cls._logger.warning("--- Training interrupted by user ---")
@@ -112,6 +118,21 @@ class ModelRunner:
 
         except Exception as e:
             cls._logger.exception(f"Final prediction process failed critically: {e}")
+
+    @classmethod
+    def _is_early_stopping_required(cls,
+                                    current_best_val_loss: float,
+                                    prev_best_val_loss: float) -> bool:
+        if (current_best_val_loss - prev_best_val_loss) < cls._MINIMUM_REQUIRED_IMPROVEMENT_PER_EPOCH:
+            epochs_without_improvement += 1
+        else:
+            epochs_without_improvement = 0
+        if epochs_without_improvement >= Config.early_stopping_epoch_count:
+            cls._logger.warning(f'Early stopping criteria achived. '
+                                f'Waited for: {Config.early_stopping_epoch_count}. '
+                                f'Best loss: {current_best_val_loss}')
+            return True
+        return False
 
     @classmethod
     def _write_submission_file(cls,
@@ -210,22 +231,30 @@ class ModelRunner:
             for i, batch in enumerate(pbar_val):
                 cls._run_validation_batch(batch, model, loss_criterion, val_losses, i, epoch, model_ema)
 
-        avg_val_loss = np.mean(val_losses) if val_losses else float("inf")
+        avg_val_loss = GPUHelper.gather_and_get_avg_loss_on_same_device(val_losses)
         cls._logger.info(f"Epoch {epoch} Avg Valid Loss: {avg_val_loss:.5f}")
         history.append({"epoch": epoch, "train_loss": avg_train_loss, "valid_loss": avg_val_loss})
 
         scheduler.step(avg_val_loss)
 
+        cls._log_gpu_stats()
+
         # --- Save Best Model ---
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            cls._save_model(best_val_loss, epoch, model, model_ema)
+            cls._save_model(best_val_loss, avg_val_loss, epoch, model, model_ema)
 
         return best_val_loss
 
     @classmethod
+    def _log_gpu_stats(cls):
+        gpu_stats = GPUHelper.get_gpu_memory_statistics()
+        cls._logger.info(f"GPU Usage: {gpu_stats[Constants.USAGE_IN_GB]:.2f} GB. -> {gpu_stats[Constants.USAGE_IN_PERCENT]:.2f} %")
+
+    @classmethod
     def _save_model(cls,
                     best_val_loss: float,
+                    current_val_loss: float,
                     epoch: int,
                     model: nn.Module,
                     model_ema: ModelEMA):
@@ -233,7 +262,9 @@ class ModelRunner:
         # Save the new best model
         fname = f"{Config.get_model_prefix()}_epoch_{epoch}_loss_{best_val_loss:.4f}{Constants.EXTN_MODEL}"
         fpath = os.path.join(Config.get_working_dir(), fname)
-        cls._logger.info(f"*** New best validation loss: {best_val_loss:.5f}. Saving model: {fname} ***")
+        cls._logger.info(f"*** New best validation loss: {best_val_loss:.5f}. \n "
+                         f"Current Validation Loss: {current_val_loss}. \n "
+                         f"Saving model: {fname} ***")
         if model_ema:
             model_state = model_ema.get_module().state_dict()
         else:
@@ -265,8 +296,8 @@ class ModelRunner:
         if cls._is_batch_valid(batch) is False:
             return
         try:
-            inputs = batch["seis"].to(Config.get_device(), non_blocking=True).float()
-            targets = batch["vel"].to(Config.get_device(), non_blocking=True).float()
+            inputs = batch["seis"].to(Config.get_gpu_local_rank(), non_blocking=True).float()
+            targets = batch["vel"].to(Config.get_gpu_local_rank(), non_blocking=True).float()
             with torch.amp.autocast(
                 device_type=Config.get_device().type,
                 dtype=Config.get_autocast_dtype(),
@@ -305,8 +336,8 @@ class ModelRunner:
         if cls._is_batch_valid(batch) is False:
             return
         try:
-            inputs = batch["seis"].to(Config.get_device(), non_blocking=True).float()
-            targets = batch["vel"].to(Config.get_device(), non_blocking=True).float()
+            inputs = batch[Constants.SEIS].to(Config.get_gpu_local_rank(), non_blocking=True).float()
+            targets = batch[Constants.VEL].to(Config.get_gpu_local_rank(), non_blocking=True).float()
 
             optimizer.zero_grad(set_to_none=True)
             # Use Automatic Mixed Precision (AMP) if on CUDA
@@ -328,7 +359,9 @@ class ModelRunner:
 
             # Update progress bar description
             if batch_index % 100 == 0:
-                pbar_train.set_postfix(loss=f"{np.mean(train_losses):.5f}")
+                memory_statistics = GPUHelper.get_gpu_memory_statistics()
+                pbar_train.set_postfix(loss=f"{np.mean(train_losses):.5f}",
+                                       gpu_usage=f'{memory_statistics[Constants.USAGE_IN_PERCENT]:.3f}')
 
         except Exception as e:
             cls._logger.exception(f"Training batch {batch_index} failed: {e}")

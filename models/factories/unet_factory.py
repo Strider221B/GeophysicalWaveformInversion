@@ -35,6 +35,7 @@ class UnetFactory(FactoryBase):
             raise
         return model, optimizer, criterion, scheduler
 
-    @staticmethod
-    def get_just_model() -> UNet:
-        return UNet().to(Config.get_device())
+    @classmethod
+    def get_just_model(cls) -> UNet:
+        model = UNet()
+        return cls._configure_model(model)

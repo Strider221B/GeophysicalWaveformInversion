@@ -32,6 +32,8 @@ class Config:
     log_level = logging.WARNING
     trial_run = False
 
+    early_stopping_epoch_count = 15
+
     @classmethod
     def initialize_params_with(cls, model_config: BaseModelConfig,
                                platform_config: BasePlatformConfig,
@@ -52,6 +54,10 @@ class Config:
     @classmethod
     def get_gpu_world_size(cls) -> int:
         return cls._gpu_world_size
+
+    @classmethod
+    def get_multi_gpu_backend(cls) -> str:
+        return cls._multi_gpu_backend
 
     # ======= Model config =======
     @classmethod
@@ -112,6 +118,7 @@ class Config:
         cls._use_multiple_gpus = use_multiple_gpus
         if use_multiple_gpus:
             cls._gpu_local_rank = int(os.environ['RANK'])
+            cls._multi_gpu_backend = 'nccl'
         else:
             cls._gpu_local_rank = 0
         cls._gpu_world_size = int(os.environ.get('WORLD_SIZE', cls._gpu_local_rank + 1))

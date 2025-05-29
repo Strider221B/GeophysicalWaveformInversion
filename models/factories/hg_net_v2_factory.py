@@ -5,9 +5,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
 from torch.optim.optimizer import Optimizer
 
-from configs.config import Config
 from configs.model_configs.hg_net_v2_config import HG_Net_V2_Config
-from helpers.constants import Constants
 from models.factories.factory_base import FactoryBase
 from models.hg_net_v2.hg_unet import HGUNet
 
@@ -37,9 +35,7 @@ class HGNetV2Factory(FactoryBase):
             raise
         return model, optimizer, criterion, scheduler
 
-    @staticmethod
-    def get_just_model() -> nn.Module:
+    @classmethod
+    def get_just_model(cls) -> nn.Module:
         model = HGUNet(HG_Net_V2_Config.backbone)
-        if Config.get_device().type == Constants.CUDA:
-            model = model.to(Config.get_gpu_local_rank())
-        return model
+        return cls._configure_model(model)
