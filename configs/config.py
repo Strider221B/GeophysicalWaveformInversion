@@ -40,7 +40,7 @@ class Config:
                                use_multiple_gpus: bool):
         cls._initialize_model_config(model_config)
         cls._initialize_platform_config(platform_config)
-        cls._initialize_gpu_config(use_multiple_gpus)
+        cls.initialize_gpu_config(use_multiple_gpus)
 
     # ======= GPU config =======
     @classmethod
@@ -114,7 +114,7 @@ class Config:
         return cls._submission_file
 
     @classmethod
-    def _initialize_gpu_config(cls, use_multiple_gpus: bool):
+    def initialize_gpu_config(cls, use_multiple_gpus: bool):
         cls._use_multiple_gpus = use_multiple_gpus
         if use_multiple_gpus:
             cls._gpu_local_rank = int(os.environ['RANK'])

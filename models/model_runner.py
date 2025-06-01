@@ -3,7 +3,7 @@ import gc
 import glob
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -54,7 +54,10 @@ class ModelRunner:
                                                scheduler,
                                                history,
                                                best_val_loss)
-                if cls._is_early_stopping_required(best_val_loss, prev_best_val_loss):
+                stop_early, epochs_without_improvement = cls._is_early_stopping_required(best_val_loss,
+                                                                                         prev_best_val_loss,
+                                                                                         epochs_without_improvement)
+                if stop_early:
                     break
 
         except KeyboardInterrupt:
@@ -122,7 +125,8 @@ class ModelRunner:
     @classmethod
     def _is_early_stopping_required(cls,
                                     current_best_val_loss: float,
-                                    prev_best_val_loss: float) -> bool:
+                                    prev_best_val_loss: float,
+                                    epochs_without_improvement: int) -> Tuple[bool, int]:
         if (current_best_val_loss - prev_best_val_loss) < cls._MINIMUM_REQUIRED_IMPROVEMENT_PER_EPOCH:
             epochs_without_improvement += 1
         else:
@@ -131,8 +135,8 @@ class ModelRunner:
             cls._logger.warning(f'Early stopping criteria achived. '
                                 f'Waited for: {Config.early_stopping_epoch_count}. '
                                 f'Best loss: {current_best_val_loss}')
-            return True
-        return False
+            return True, epochs_without_improvement
+        return False, epochs_without_improvement
 
     @classmethod
     def _write_submission_file(cls,

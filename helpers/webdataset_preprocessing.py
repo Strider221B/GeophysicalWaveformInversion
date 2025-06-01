@@ -165,9 +165,6 @@ class WebdatasetPreprocessing:
             if stage in [Constants.TRAIN, Constants.VAL]:
                 dataset = dataset.map(map_train_val, handler=map_handler)
 
-            if Config.get_use_multiple_gpus():
-                dataset = dataset.shard(num_shards=Config.get_gpu_world_size(), shard_id=Config.get_gpu_local_rank())
-
             # Shuffle buffer for training data
             if is_train:
                 dataset = dataset.shuffle(cls._BUFFER_SIZE_FOR_SHUFFLING)

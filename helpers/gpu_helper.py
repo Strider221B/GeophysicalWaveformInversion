@@ -41,9 +41,10 @@ class GPUHelper:
                 Constants.TOTAL_IN_GB: total / cls._ONE_GB}
 
     @classmethod
-    def run_on_multi_gpu_if_required(cls):
-        if cls._is_single_gpu_setup():
+    def run_on_multi_gpu_if_required(cls, use_multiple_gpus: bool):
+        if not use_multiple_gpus:
             return
+        Config.initialize_gpu_config(use_multiple_gpus)
         rank = Config.get_gpu_local_rank()
         world_size = Config.get_gpu_world_size()
         cls._setup_for_multi_gpu(rank, world_size)
@@ -55,6 +56,7 @@ class GPUHelper:
             return
         dist.barrier()
         dist.destroy_process_group()
+        Config.initialize_gpu_config(False)
 
     @classmethod
     def gather_and_get_avg_loss_on_same_device(cls, val_losses: List[float]) -> float:
