@@ -147,6 +147,8 @@ class WebdatasetPreprocessing:
             print(f"W: No shard paths provided for stage '{stage}'. Cannot create dataset.")
             return None
 
+        cls._update_paths_if_insufficient_for_multi_gpus(paths)
+
         print(f"Creating WebDataset for stage '{stage}' from {len(paths)} shards.")
         is_train = stage == Constants.TRAIN
         # Continue pipeline even if some samples fail decoding/mapping
@@ -174,6 +176,16 @@ class WebdatasetPreprocessing:
         except Exception as e:
             print(f"E: Error creating WebDataset pipeline for stage '{stage}': {e}")
             return None
+
+    @classmethod
+    def _update_paths_if_insufficient_for_multi_gpus(cls, paths: List[str]):
+        if Config.get_use_multiple_gpus():
+            number_of_gpus = Config.get_gpu_world_size()
+            if len(paths) < number_of_gpus:
+                cls._logger.warning(f'Length of paths: {len(paths)} is not sufficient for GPUs: {number_of_gpus}')
+                for _ in range(len(paths), number_of_gpus):
+                    cls._logger.warning('Updating paths to add first entry back again.')
+                    paths.append(paths[0]) # Hack, so that we have sufficient paths for every GPU.
 
     @classmethod
     def _map_train_val(cls,

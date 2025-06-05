@@ -142,7 +142,7 @@ class FileHandler:
 
     @staticmethod
     def _create_dataloader_from(paths: List[str], dataset: wds.WebDataset) -> DataLoader:
-        n_trn_w = min(Config.num_workers, len(paths)) if paths else 0
+        n_trn_w = min(Config.get_num_workers(), len(paths)) if paths else 0
         p_trn = n_trn_w > 0  # Use persistent workers only if num_workers > 0
         dataloader = DataLoader(dataset.batched(Config.batch_size),
                                 batch_size=None,  # Already batched by WebDataset

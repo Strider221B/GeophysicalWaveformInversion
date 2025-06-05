@@ -19,7 +19,6 @@ class Config:
     num_used_shards = None  # Use all available
     test_size = 0.1  # Proportion for validation split
     batch_size = 16
-    num_workers = 2
 
     # --- Augmentation Params ---
     apply_augmentation = True
@@ -58,6 +57,10 @@ class Config:
     @classmethod
     def get_multi_gpu_backend(cls) -> str:
         return cls._multi_gpu_backend
+
+    @classmethod
+    def get_num_workers(cls) -> int:
+        return cls._get_num_workers
 
     # ======= Model config =======
     @classmethod
@@ -119,8 +122,10 @@ class Config:
         if use_multiple_gpus:
             cls._gpu_local_rank = int(os.environ['RANK'])
             cls._multi_gpu_backend = 'nccl'
+            cls._get_num_workers = 1
         else:
             cls._gpu_local_rank = 0
+            cls._get_num_workers = 2
         cls._gpu_world_size = int(os.environ.get('WORLD_SIZE', cls._gpu_local_rank + 1))
 
     @classmethod

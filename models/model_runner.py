@@ -63,7 +63,7 @@ class ModelRunner:
         except KeyboardInterrupt:
             cls._logger.warning("--- Training interrupted by user ---")
         except Exception as e:
-            cls._logger.exception(f"Training loop encountered a critical error: {e}")
+            cls._logger.exception(f"Training loop encountered a critical error. GPU Rank: {Config.get_gpu_local_rank()}. Error: {e}")
         finally:
             cls._logger.info("--- Training Loop Finished ---")
         return history
@@ -96,7 +96,7 @@ class ModelRunner:
             # Setup DataLoader for test set
             # Use slightly smaller batch size and fewer workers for inference if needed
             test_batch_size = max(1, Config.batch_size // 2)
-            test_num_workerd = min(max(0, Config.num_workers // 2),
+            test_num_workerd = min(max(0, Config.get_num_workers() // 2),
                                    (os.cpu_count() // 2 if os.cpu_count() else 1))
             dataloader_test = DataLoader(
                 test_dataset,
@@ -230,6 +230,7 @@ class ModelRunner:
 
         model.eval()
         val_losses = []
+        cls._logger.warning(f'**** {Config.get_num_workers()}, {Config.num_used_shards}')
         pbar_val = tqdm(dataloader_validation, desc=f"Valid E{epoch}", leave=False, unit="batch")
         with torch.no_grad():
             for i, batch in enumerate(pbar_val):
