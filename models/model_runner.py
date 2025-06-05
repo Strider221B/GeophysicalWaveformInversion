@@ -230,7 +230,6 @@ class ModelRunner:
 
         model.eval()
         val_losses = []
-        cls._logger.warning(f'**** {Config.get_num_workers()}, {Config.num_used_shards}')
         pbar_val = tqdm(dataloader_validation, desc=f"Valid E{epoch}", leave=False, unit="batch")
         with torch.no_grad():
             for i, batch in enumerate(pbar_val):
@@ -366,7 +365,7 @@ class ModelRunner:
             if batch_index % 100 == 0:
                 memory_statistics = GPUHelper.get_gpu_memory_statistics()
                 pbar_train.set_postfix(loss=f"{np.mean(train_losses):.5f}",
-                                       gpu_usage=f'{memory_statistics[Constants.USAGE_IN_PERCENT]:.3f}')
+                                       gpu_usage=f'{memory_statistics[Constants.USAGE_IN_PERCENT]:.3f}%')
 
         except Exception as e:
             cls._logger.exception(f"Training batch {batch_index} failed: {e}")

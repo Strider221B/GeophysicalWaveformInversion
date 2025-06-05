@@ -28,7 +28,7 @@ class Config:
 
     # --- Misc ---
     seed = 42
-    log_level = logging.WARNING
+    log_level = logging.INFO
     trial_run = False
 
     early_stopping_epoch_count = 15

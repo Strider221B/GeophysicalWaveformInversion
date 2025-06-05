@@ -1,7 +1,7 @@
 import ctypes
 import gc
 import time
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -33,10 +33,10 @@ class GPUHelper:
 
     @classmethod
     def get_gpu_memory_statistics(cls) -> Dict[str, float]:
-        free, total = torch.cuda.mem_get_info(device=0)
-        mem_used = (total - free) / cls._ONE_GB
+        free, total = cls._get_gpu_free_and_total_memory()
+        mem_used = (total - free)
         mem_used_percent = mem_used * 100 / total
-        return {Constants.USAGE_IN_GB: mem_used,
+        return {Constants.USAGE_IN_GB: mem_used / cls._ONE_GB,
                 Constants.USAGE_IN_PERCENT: mem_used_percent,
                 Constants.TOTAL_IN_GB: total / cls._ONE_GB}
 
@@ -65,6 +65,16 @@ class GPUHelper:
         v = torch.tensor([sum(val_losses), len(val_losses)], device=Config.get_gpu_local_rank())
         torch.distributed.all_reduce(v, op=dist.ReduceOp.SUM)
         return (v[0] / v[1]).item()
+
+    @classmethod
+    def _get_gpu_free_and_total_memory(cls) -> Tuple[float, float]:
+        free_across_gpus = 0
+        total_across_gpus = 0
+        for i in range(Config.get_gpu_world_size()):
+            free, total = torch.cuda.mem_get_info(device=0)
+            free_across_gpus += free
+            total_across_gpus += total
+        return free_across_gpus, total_across_gpus
 
     @staticmethod
     def _setup_for_multi_gpu(rank: int, world_size: int):
