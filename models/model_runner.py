@@ -207,7 +207,7 @@ class ModelRunner:
                    scheduler: LRScheduler,
                    history: List[Dict[str, Any]],
                    best_val_loss: float):
-        cls._logger.info(f"=== Epoch {epoch}/{Config.get_n_epochs()} ===")
+        cls._logger.info(f"=== Epoch {epoch}/{Config.get_n_epochs()} ===. GPU Rank: {Config.get_gpu_local_rank()}")
         # --- Training Phase ---
         gc.collect()
         if Config.get_use_cuda():
@@ -219,6 +219,7 @@ class ModelRunner:
         for i, batch in enumerate(progess_bar_train):
             cls._train_batch(batch, i, optimizer, model, loss_criterion, train_losses, progess_bar_train, model_ema)
 
+        cls._logger.debug(f'Training complete for: Epoch {epoch}. GPU Rank: {Config.get_gpu_local_rank()}')
         avg_train_loss = np.mean(train_losses) if train_losses else 0.0
         cls._logger.info(f"Epoch {epoch} Avg Train Loss: {avg_train_loss:.5f}. GPU Rank: {Config.get_gpu_local_rank()}")
 
