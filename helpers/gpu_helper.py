@@ -9,10 +9,12 @@ import torch.distributed as dist
 
 from configs.config import Config
 from helpers.constants import Constants
+from helpers.logger import Logger
 
 class GPUHelper:
 
     _ONE_GB = 1024**3
+    _logger = Logger.get_logger()
 
     @staticmethod
     def clean_all_memory(deep=False):
@@ -62,6 +64,7 @@ class GPUHelper:
     def gather_and_get_avg_loss_on_same_device(cls, val_losses: List[float]) -> float:
         if cls._is_single_gpu_setup():
             return np.mean(val_losses) if val_losses else float("inf")
+        cls._logger.info(f'Gathering loss for: {Config.get_gpu_local_rank()}')
         v = torch.tensor([sum(val_losses), len(val_losses)], device=Config.get_gpu_local_rank())
         torch.distributed.all_reduce(v, op=dist.ReduceOp.SUM)
         return (v[0] / v[1]).item()

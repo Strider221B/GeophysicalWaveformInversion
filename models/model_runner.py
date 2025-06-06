@@ -220,7 +220,7 @@ class ModelRunner:
             cls._train_batch(batch, i, optimizer, model, loss_criterion, train_losses, progess_bar_train, model_ema)
 
         avg_train_loss = np.mean(train_losses) if train_losses else 0.0
-        cls._logger.info(f"Epoch {epoch} Avg Train Loss: {avg_train_loss:.5f}")
+        cls._logger.info(f"Epoch {epoch} Avg Train Loss: {avg_train_loss:.5f}. GPU Rank: {Config.get_gpu_local_rank()}")
 
         # --- Validation Phase ---
         if dataloader_validation is None:
