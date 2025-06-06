@@ -212,9 +212,12 @@ class ModelRunner:
         gc.collect()
         if Config.get_use_cuda():
             torch.cuda.empty_cache()
+        cls._logger.debug(f'Training: before Model EMA. GPU Rank: {Config.get_gpu_local_rank()}')
         model_ema = ModelEMA(model, decay=Config.get_weight_decay(), device=Config.get_gpu_local_rank())
+        cls._logger.debug(f'Training: after Model EMA. GPU Rank: {Config.get_gpu_local_rank()}')
         model.train()
         train_losses = []
+        cls._logger.debug(f'Training: before batches. GPU Rank: {Config.get_gpu_local_rank()}')
         progess_bar_train = tqdm(dataloader_train, desc=f"Train E{epoch}", leave=False, unit="batch")
         for i, batch in enumerate(progess_bar_train):
             cls._train_batch(batch, i, optimizer, model, loss_criterion, train_losses, progess_bar_train, model_ema)
@@ -339,12 +342,15 @@ class ModelRunner:
                      pbar_train: tqdm,
                      model_ema: ModelEMA):
         if cls._is_batch_valid(batch) is False:
+            cls._logger.warning(f'Training: exited early because of invalid batch. GPU Rank: {Config.get_gpu_local_rank()}')
             return
         try:
+            cls._logger.debug(f'Training batch: start. GPU Rank: {Config.get_gpu_local_rank()}')
             inputs = batch[Constants.SEIS].to(Config.get_gpu_local_rank(), non_blocking=True).float()
             targets = batch[Constants.VEL].to(Config.get_gpu_local_rank(), non_blocking=True).float()
 
             optimizer.zero_grad(set_to_none=True)
+            cls._logger.debug(f'Training batch: Before model execution. GPU Rank: {Config.get_gpu_local_rank()}')
             # Use Automatic Mixed Precision (AMP) if on CUDA
             with torch.amp.autocast(
                 device_type=Config.get_device().type,
@@ -354,11 +360,13 @@ class ModelRunner:
                 outputs = model(inputs)
                 loss = loss_criterion(outputs, targets)
 
+            cls._logger.debug(f'Training batch: After model execution. GPU Rank: {Config.get_gpu_local_rank()}')
             # Backward pass and optimization step
             loss.backward()
             optimizer.step()
             train_losses.append(loss.item())
 
+            cls._logger.debug(f'Training batch: After loss calculation. GPU Rank: {Config.get_gpu_local_rank()}')
             if model_ema is not None:
                 model_ema.update(model)
 

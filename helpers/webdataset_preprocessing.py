@@ -181,11 +181,22 @@ class WebdatasetPreprocessing:
     def _update_paths_if_insufficient_for_multi_gpus(cls, paths: List[str]):
         if Config.get_use_multiple_gpus():
             number_of_gpus = Config.get_gpu_world_size()
-            if len(paths) < number_of_gpus:
-                cls._logger.warning(f'Length of paths: {len(paths)} is not sufficient for GPUs: {number_of_gpus}')
-                for _ in range(len(paths), number_of_gpus):
-                    cls._logger.warning('Updating paths to add first entry back again.')
-                    paths.append(paths[0]) # Hack, so that we have sufficient paths for every GPU.
+            path_len = len(paths)
+            if (path_len > number_of_gpus) and (path_len % number_of_gpus == 0):
+                return
+            cls._logger.warning(f'Length of paths: {path_len} is not sufficient for GPUs: {number_of_gpus}')
+            paths_to_re_add = 1
+            if (path_len < number_of_gpus):
+                paths_to_re_add = number_of_gpus - path_len
+            # If we are not using torch's distributed data loader, we have to ensure the we have sufficient data
+            # for all the GPUs and in equal quantity. Else, training step hangs with some of the GPUs completing
+            # an epoch first and the other doesn't.
+            # We need to ensure both the GPUs get same number of batches.
+            while (paths_to_re_add + path_len) % number_of_gpus != 0:
+                paths_to_re_add += 1
+            cls._logger.warning(f'Updating paths to add last entry back again. Number of additions: {paths_to_re_add}')
+            for _ in range(paths_to_re_add):
+                paths.append(paths[-1]) # Hack, so that we have sufficient paths for every GPU.
 
     @classmethod
     def _map_train_val(cls,
