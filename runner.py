@@ -15,10 +15,15 @@ class Runner:
     _initialized = False
 
     @classmethod
-    def run(cls, model_config: BaseModelConfig, platform_config: BasePlatformConfig, use_multiple_gpus: bool):
+    def run(cls, model_config: BaseModelConfig, platform_config: BasePlatformConfig):
+        '''
+        Unfortunately the run method in it's ucrrent state cannot be used with multiple GPUs.
+        We can use multiple GPUs with train but needs to be triggered via: torchrun --nproc_per_node=2 runner.py
+        And inference must be trigerred via: python runner.py
+        '''
         cls._initialize(model_config, platform_config)
         cls.create_shards(model_config, platform_config)
-        cls.train_model(model_config, platform_config, use_multiple_gpus)
+        cls.train_model(model_config, platform_config, False)
         cls.run_predictions(model_config, platform_config)
 
     @classmethod
