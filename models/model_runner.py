@@ -128,9 +128,9 @@ class ModelRunner:
                                     prev_best_val_loss: float,
                                     epochs_without_improvement: int) -> Tuple[bool, int]:
         if (current_best_val_loss - prev_best_val_loss) < cls._MINIMUM_REQUIRED_IMPROVEMENT_PER_EPOCH:
-            epochs_without_improvement += 1
-        else:
             epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
         if epochs_without_improvement >= Config.early_stopping_epoch_count:
             cls._logger.warning(f'Early stopping criteria achived. '
                                 f'Waited for: {Config.early_stopping_epoch_count}. '
